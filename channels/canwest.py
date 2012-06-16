@@ -1,4 +1,3 @@
-
 from theplatform import *
 try:
     from pyamf import remoting
@@ -214,28 +213,3 @@ class diyNet(CanwestBaseChannel):
         url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/DIY%20Network%20-%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
-
-
-
-class YTV(CanwestBaseChannel):
-    short_name = 'ytv'
-    long_name = 'YTV'
-    PID = 't4r_81mEo8zCyfYh_AKeHJxmZleq26Vx'
-    swf_url = 'http://www.ytv.com/PDK/swf/flvPlayer.swf'
-    root_depth = 0
-    
-    def get_categories_json(self,arg):
-        url = CanwestBaseChannel.get_categories_json(self,arg) + '&field=parentID&query=IncludeParents' #urlencode
-        logging.debug('get_categories_json: %s'%url)
-        return url
-
-
-class TreehouseTV(CanwestBaseChannel):
-    short_name = 'treehouse'
-    long_name = 'Treehouse TV'
-    PID = '6FTFywmxdSd_HKMYKQGFwsAf8rkcdn9R'
-    swf_url = 'http://mediaparent.treehousetv.com/swf/flvPlayer.swf'
-    root_depth = 0
-
-
-
