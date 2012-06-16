@@ -175,7 +175,7 @@ class CTVBaseChannel(BaseChannel):
             self.plugin.end_list()
         
     def clipid_to_stream_url(self, clipid):
-        rurl = "http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s" % (clipid)
+        rurl = "http://cls.ctvdigital.net/cliplookup.aspx?id=%s" % (clipid)
         parse = URLParser(swf_url=self.swf_url, force_rtmp=not self.plugin.get_setting("awesome_librtmp") == "true")        
         url = parse(self.plugin.fetch(rurl).read().strip()[17:].split("'",1)[0])
         return url
