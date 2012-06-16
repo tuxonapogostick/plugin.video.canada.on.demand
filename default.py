@@ -56,7 +56,7 @@ class OnDemandPlugin(object):
     def _urlopen(self, url, retry_limit=4):
         retries = 0
         while retries < retry_limit:
-            logging.debug("fetching %s" % (url
+            logging.debug("fetching %s" % (url,))
             # Add referer for CTV to work properly
             parsed = urlparse.urlparse(url)
             req = urllib2.Request(url)
