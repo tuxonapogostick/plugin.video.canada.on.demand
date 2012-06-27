@@ -193,18 +193,17 @@ class CTVLocalNews(CTVBaseChannel):
     default_action = 'root'
     
     local_channels = [
-        ('British Columbia', 'ctvbc.ctv.ca'),
-        ('Calgary', 'calgary.ctv.ca'),
-        ('Edmonton', 'edmonton.ctv.ca'),
-        ('Montreal', 'montreal.ctv.ca'),
-        ('Northern Ontario', 'northernontario.ctv.ca'),
-        ('Ottawa', 'ottawa.ctv.ca'),
-        ('Regina', 'regina.ctv.ca'),
-        ('Saskatoon', 'saskatoon.ctv.ca'),
-        ('Southwestern Ontario', 'swo.ctv.ca'),
-        ('Toronto', 'toronto.ctv.ca'),
-        ('Winnipeg', 'winnipeg.ctv.ca'),
-        ('Atlantic', 'atlantic.ctv.ca'),
+        ('British Columbia', 'bc.ctvnews.ca/video'),
+        ('Calgary', 'calgary.ctvnews.ca/video'),
+        ('Edmonton', 'edmonton.ctvnews.ca/video'),
+        ('Montreal', 'montreal.ctvnews.ca/video'),
+        ('Northern Ontario', 'northernontario.ctvnews.ca/video'),
+        ('Ottawa', 'ottawa.ctvnews.ca/video'),
+        ('Regina', 'regina.ctvnews.ca/video'),
+        ('Saskatoon', 'saskatoon.ctvnews.ca/video'),
+        ('Southwestern Ontario', 'swo.ctvnews.ca/video'),
+        ('Toronto', 'toronto.ctvnews.ca/video'),
+        ('Winnipeg', 'winnipeg.ctvnews.ca/video'),
     ]
 
         
@@ -225,24 +224,54 @@ class CTVLocalNews(CTVBaseChannel):
         
     def action_browse(self):
         soup = BeautifulSoup(self.plugin.fetch("http://%s/" % (self.args['remote_url'],), max_age=self.cache_timeout))
-        for script in soup.findAll('script'):
-            try:
-                txt = script.contents[0].strip()
-            except:
-                continue
+
+        for category in soup.findAll('dt', {'class': 'videoPlaylistCategories'}):
+            data = {}
+            data.update(self.args)           
+            data.update({
+                'action': 'browse_category',
+                'Title': category.a.contents[0],
+                'entry_id': None,
+                'remote_url': self.args['remote_url']+"/"+category['id']+'?ot=example.AjaxPageLayout.ot&maxItemsPerPage=100&pageNum=1',
+            })
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
+
+    def action_browse_category(self):
+        soup = BeautifulSoup(self.plugin.fetch("http://%s" % (self.args['remote_url'],), max_age=self.cache_timeout))
+
+        for clip in soup.findAll('article', {'class':'videoPackageThumb'}):
+            thumb = clip.img['src']
+            tagline = clip.h3.string
             
-            if txt.startswith("VideoPlaying["):
-                txt = txt.split("{",1)[1].rsplit("}")[0]
-                
-                data = {}
-                data.update(self.args)
-                data.update(parse_javascript_object(txt))
-                data.update({
-                    'action': 'play_clip',
-                    'remote_url': data['ClipId'],
-                    'clip_id': data['ClipId']
-                })
-                self.plugin.add_list_item(data, is_folder=False)
+            script = clip.findNextSibling()
+            while script:
+                if script.name=='article': break;
+                try:
+                    txt = script.string.strip()
+                except:
+                    pass
+
+                if txt.find('clip.id')>0:
+                    match = re.search('.*clip[.]id = ([0-9]*).*clip[.]title = escape\("([^)]*)"\).*clip[.]description = escape\("([^)]*)"\).*',txt,re.DOTALL)
+                    clipId = match.group(1)
+                    title = match.group(2).strip()
+                    plot = match.group(3).strip()
+                    
+                    data = {}
+                    data.update(self.args)
+                    data.update({
+                        'Title': title,
+                        'action': 'play_clip',
+                        'remote_url': clipId,
+                        'clip_id': clipId,
+                        'Thumb': thumb,
+                        'tagline': tagline,
+                        'plot': plot,
+                        'genre': 'News'
+                    })
+                    self.plugin.add_list_item(data, is_folder=False)
+                script = script.findNextSibling()
         self.plugin.end_list()
 
 
