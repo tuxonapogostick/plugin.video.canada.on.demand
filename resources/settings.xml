@@ -1,6 +1,4 @@
 <settings>
-   <setting id="awesome_librtmp" type="bool" label="30006" default="false" />
-   <setting id="worst_channel_support" type="enum" label="30003" values="Bad|Ugly|Good" default="1"  enable="eq(-1,false)" />
    <setting id="max_bitrate" type="number" label="30005" default="9999" />   
    <setting id="make_playlists" type="bool" label="30004" default="false" />
    <setting id="max_playlist_size" type="number" label="30007" default="6" enable="eq(-1,true)" />
@@ -8,5 +6,4 @@
    <setting id="default_cache_timeout" type="number" label="30008" default="14400" />
    <setting id="http_proxy" type="text" label="30001" default="" />
    <setting id="http_proxy_port" type="text" label="30002" default="" />
-   <setting id="show_dev_channels" type="bool" label="30009" default="false" />
 </settings>

@@ -176,7 +176,7 @@ class CTVBaseChannel(BaseChannel):
         
     def clipid_to_stream_url(self, clipid):
         rurl = "http://cls.ctvdigital.net/cliplookup.aspx?id=%s" % (clipid)
-        parse = URLParser(swf_url=self.swf_url, force_rtmp=not self.plugin.get_setting("awesome_librtmp") == "true")        
+        parse = URLParser(swf_url=self.swf_url)        
         url = parse(self.plugin.fetch(rurl).read().strip()[17:].split("'",1)[0])
         return url
     
@@ -193,18 +193,18 @@ class CTVLocalNews(CTVBaseChannel):
     default_action = 'root'
     
     local_channels = [
+        ('Atlantic', 'atlantic.ctv.ca'),
         ('British Columbia', 'ctvbc.ctv.ca'),
         ('Calgary', 'calgary.ctv.ca'),
         ('Edmonton', 'edmonton.ctv.ca'),
+        ('Kitchener', 'kitchener.ctv.ca'),
         ('Montreal', 'montreal.ctv.ca'),
-        ('Northern Ontario', 'northernontario.ctv.ca'),
+        ('Northern Ontario', 'northernontario.ctv.ca/sudbury'),
         ('Ottawa', 'ottawa.ctv.ca'),
         ('Regina', 'regina.ctv.ca'),
         ('Saskatoon', 'saskatoon.ctv.ca'),
-        ('Southwestern Ontario', 'swo.ctv.ca'),
         ('Toronto', 'toronto.ctv.ca'),
         ('Winnipeg', 'winnipeg.ctv.ca'),
-        ('Atlantic', 'atlantic.ctv.ca'),
     ]
 
         
@@ -232,17 +232,30 @@ class CTVLocalNews(CTVBaseChannel):
                 continue
             
             if txt.startswith("VideoPlaying["):
-                txt = txt.split("{",1)[1].rsplit("}")[0]
+                txt = txt.split("{",1)[1].rsplit("}",1)[0]
                 
                 data = {}
                 data.update(self.args)
-                data.update(parse_javascript_object(txt))
+                jsobj = parse_javascript_object(txt)
                 data.update({
+                    'Title': jsobj['Title'].split(':',1)[-1].strip(),
                     'action': 'play_clip',
-                    'remote_url': data['ClipId'],
-                    'clip_id': data['ClipId']
+                    'remote_url': jsobj['ClipId'],
+                    'clip_id': jsobj['ClipId']
                 })
                 self.plugin.add_list_item(data, is_folder=False)
+            elif txt.startswith("writeBottom("): # only seen in Northern Ontario
+                txt = txt.split("(",1)[1].rsplit('"',1)[0].split(', "')
+                data = {}
+                data.update(self.args)
+                data.update({
+                    'Title': txt[1].split(':',1)[-1].strip(),
+                    'action': 'play_clip',
+                    'remote_url': txt[0],
+                    'clip_id': txt[0]
+                })
+                self.plugin.add_list_item(data, is_folder=False)
+                
         self.plugin.end_list()
 
 

@@ -100,6 +100,9 @@ class ThePlatformBaseChannel(BaseChannel):
                         data.update({dict['title']: dict['value']},) #urlquoteval(dict['value'])
                 
             cats.append(data)
+
+        # for CBC: sort categories (assumes that GroupLevel won't exceed 100000)
+        cats.sort(key=lambda x: int(x['GroupLevel'])*100000+int(x['GroupOrder']) if 'GroupOrder' in x else 0)
             
         logging.debug("get_categories cats=%s"%cats)
         return cats
@@ -112,47 +115,47 @@ class ThePlatformBaseChannel(BaseChannel):
         logging.debug('get_releases url=%s'%url)
         
         data = self.parse_callback(self.plugin.fetch(url, max_age=self.cache_timeout).read())
-        make_playlists = self.plugin.get_setting('make_playlists') == 'true'
         max_bitrate = int(self.plugin.get_setting('max_bitrate'))
         
         rels = []
         for item in data['items']:
             item['bitrate'] = int(item['bitrate'])/1024
-            if (not rels) or (rels[-1]['Title'] != item['title']):
+            item_date = time.strftime('%d.%m.%Y', time.localtime(item['airdate']/1000))
+            if (not rels) or (rels[-1]['Title'] != item['title']) or (rels[-1]['medialen'] != item['length']):
                 
-                action = 'browse_episode'
-                if make_playlists:
-                    action = 'play_episode'
+                action = 'play_episode'
                 
                 rels.append({
                     'Thumb': item['thumbnailURL'],
                     'Title': item['title'],
                     'Plot': item['description'],
+                    'Date': item_date,
                     'entry_id': item['ID'],
                     'remote_url': item['URL'],
                     'remote_PID': item['PID'],
                     'channel': self.args['channel'],
                     'action': action,
                     'bitrate': item['bitrate'],
+                    'medialen' : item['length']
                 })
 
             else:
                 if item['bitrate'] <= max_bitrate and item['bitrate'] > rels[-1]['bitrate']:
                     rels.pop()
-                    action = 'browse_episode'
-                    if make_playlists:
-                        action = 'play_episode'
+                    action = 'play_episode'
                     
                     rels.append({
                         'Thumb': item['thumbnailURL'],
                         'Title': item['title'],
                         'Plot': item['description'],
+                        'Date': item_date,
                         'entry_id': item['ID'],
                         'remote_url': item['URL'],
                         'remote_PID': item['PID'],
                         'channel': self.args['channel'],
                         'action': action,
                         'bitrate': item['bitrate'],
+                        'medialen': item['length']
                     })
                     
                 
@@ -179,19 +182,24 @@ class ThePlatformBaseChannel(BaseChannel):
 
         categories = self.get_categories(parent_id)
         logging.debug("Got %s Categories: %s" % (len(categories), "\n".join(repr(c) for c in categories)))
-        releases = self.get_releases(self.args)
-        logging.debug("Got %s Releases: %s" % (len(releases), "\n".join(repr(r) for r in releases)))
 
-        for cat in categories:
-            self.plugin.add_list_item(cat)
-        for rel in releases:
-            self.plugin.add_list_item(rel)
-        self.plugin.end_list()
+        if categories:
+            for cat in categories:
+                self.plugin.add_list_item(cat)
+            self.plugin.end_list()
+        else:
+            # only add releases if no categories
+            releases = self.get_releases(self.args)
+            logging.debug("Got %s Releases: %s" % (len(releases), "\n".join(repr(r) for r in releases)))
+            for rel in releases:
+                self.plugin.add_list_item(rel, is_folder=False)
+            self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
 
 
     def get_episode_list_data(self, remote_pid):
         url = 'http://release.theplatform.com/content.select?&pid=%s&format=SMIL&mbr=true' % (remote_pid,)
-        soup = BeautifulStoneSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
+        # do not cache this!!!
+        soup = BeautifulStoneSoup(self.plugin.fetch(url))
         logging.debug("SOUP: %s" % (soup,))
         results = []
 
@@ -215,13 +223,12 @@ class ThePlatformBaseChannel(BaseChannel):
                     base_url = decode_htmlentities(ref['src'])
                     playpath = None
                 logging.debug("RTMPE ref= %s, base_url = %s, playpath = %s" %(ref['src'], base_url, playpath))
+            elif soup.meta['base'].startswith('rtmp://'): #CBC type of SMIL
+                base_url = decode_htmlentities(soup.meta['base'])
+                playpath = ref['src']
+                logging.debug('CBC type of SMIL  base_url=%s  playpath=%s'%(base_url, playpath))
             else:
-                if soup.meta['base'].startswith('rtmp://'): #CBC type of SMIL
-                    base_url = decode_htmlentities(soup.meta['base'])
-                    playpath = ref['src']
-                    logging.debug('CBC type of SMIL  base_url=%s  playpath=%s'%(base_url, playpath))
-                else:
-                    continue
+                continue
 
             qs = None
             try:
@@ -246,27 +253,10 @@ class ThePlatformBaseChannel(BaseChannel):
         return results
     
     def action_play_episode(self):
-        import xbmc
-        playlist = xbmc.PlayList(1)
-        playlist.clear() 
-        for data in self.get_episode_list_data(self.args['remote_PID']):
-            url = self.plugin.get_url(data)
-            item = self.plugin.add_list_item(data, is_folder=False, return_only=True)
-            playlist.add(url, item)
-        xbmc.Player().play(playlist)
-        xbmc.executebuiltin('XBMC.ActivateWindow(fullscreenvideo)')
-
-        
-    def action_browse_episode(self):
-        for item in self.get_episode_list_data(self.args['remote_PID']):
-            self.plugin.add_list_item(item, is_folder=False)
-        self.plugin.end_list()
-
-
-    def action_play(self):
+        items = self.get_episode_list_data(self.args['remote_PID'])
+        if len(items) != 1: raise RuntimeError('theplatform len(items) should be 1')
         parse = URLParser(swf_url=self.swf_url)
-        self.plugin.set_stream_url(parse(self.args['clip_url']))
-
+        self.plugin.set_stream_url(parse(items[0]['clip_url']))
 
     @classmethod
     def get_channel_entry_info(self):
@@ -289,9 +279,11 @@ class ThePlatformBaseChannel(BaseChannel):
     
     
 class CBCChannel(ThePlatformBaseChannel):
-    #is_abstract = True
     PID = "_DyE_l_gC9yXF9BvDQ4XNfcCVLS4PQij"
     base_url = 'http://cbc.feeds.theplatform.com/ps/JSON/PortalService/2.2/'
+    custom_fields = ['Account','AudioVideo','BylineCredit','CBCPersonalities','Characters','ClipType',
+        'EpisodeNumber','Event','Genre','LiveOnDemand','Organizations','People','Producers','Region',
+        'Segment','Show','SeasonNumber','Sport','SubEvent']
     status = STATUS_UGLY
     short_name = 'cbc'
     long_name = 'CBC'
@@ -305,7 +297,12 @@ class CBCChannel(ThePlatformBaseChannel):
     def get_categories_json(self, arg):
         logging.debug('get_categories_json arg=%s, categ_json=%s'%(arg, self.category_json))
         url = ThePlatformBaseChannel.get_categories_json(self) + \
-            '&customField=Account&customField=Show&customField=SeasonNumber&customField=AudioVideo&customField=ClipType&customField=LiveOnDemand'
+            '&customField=GroupLevel&customField=GroupOrder&customField=IsDynamicPlaylist'
+
+        # Add other custom fields
+        for cf in self.custom_fields:
+            url += '&customField=' + cf
+
         if arg or self.in_root:
             url += self.category_json
         if arg:
@@ -316,21 +313,15 @@ class CBCChannel(ThePlatformBaseChannel):
     def get_releases_json(self,arg):
         url = ThePlatformBaseChannel.get_releases_json(self)
         logging.warn("RELURL: %s" % (url,))
-        if 'Account' in arg:
-            url += '&query=ContentCustomText|Account|%s' % urlquoteval(arg['Account'])
-        if 'Show' in arg:
-            url += '&query=ContentCustomText|Show|%s' % urlquoteval(arg['Show'])
-        if 'SeasonNumber' in arg:
-            url += '&query=ContentCustomText|SeasonNumber|%s' % urlquoteval(arg['SeasonNumber'])
-        if 'AudioVideo' in arg:
-            url += '&query=ContentCustomText|AudioVideo|%s' % urlquoteval(arg['AudioVideo'])
-        if 'ClipType' in arg:
-            url += '&query=ContentCustomText|ClipType|%s' % urlquoteval(arg['ClipType'])
-        if 'LiveOnDemand' in arg:
-            url += '&query=ContentCustomText|LiveOnDemand|%s' % urlquoteval(arg['LiveOnDemand'])
 
+        # this code is copied from CBCVideoFunctions.js on CBC's web site
+        if arg['IsDynamicPlaylist'] and arg['IsDynamicPlaylist'].lower() != 'false':
+            for cf in self.custom_fields:
+                if cf in arg and arg[cf] != '(not specified)' and (cf!='Genre' or arg[cf]!='Other'):
+                    url += '&query=ContentCustomText|%s|%s' % (cf, urlquoteval(arg[cf]))
+        else:
+            url += '&query=CategoryIds|%s' % urlquoteval(arg['entry_id'])
 
-        #url += '&query=CategoryIDs|%s'%arg['entry_id']
         logging.debug('get_releases_json: %s'%url)
         return url
         
@@ -354,7 +345,7 @@ class CBCChannel(ThePlatformBaseChannel):
         #all CBC sections = ['Shows,Sports,News,Kids,Radio']
         self.category_json = ''
         self.in_root = True #just for annoying old CBC
-        self.category_json = '&query=FullTitles|Shows,Sports,News,Kids,Radio'
+        self.category_json = '&query=FullTitles|Shows,Sports,News,Radio'
         categories = self.get_categories(None)
         
         for cat in categories:
@@ -385,15 +376,6 @@ class TouTV(ThePlatformBaseChannel):
             ("webteles",u"Webteles"),
     ]
   
-    def action_browse_episode(self):
-        url = self.args['remote_url']
-        soup = BeautifulSoup(self.plugin.fetch(url,max_age=self.cache_timeout))
-        scripts = soup.findAll('script')
-        
-        epinfo_tag = [s for s in scripts if s.contents and s.contents[0].strip().startswith("// Get IP address and episode ID")][0]
-        self.args['remote_PID'] = re.search(r"episodeId = '([^']+)'", epinfo_tag.contents[0].strip()).groups()[0]
-        return ThePlatformBaseChannel.action_browse_episode(self)
-        
     def action_play_episode(self):
         url = self.args['remote_url']
         soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
@@ -403,11 +385,6 @@ class TouTV(ThePlatformBaseChannel):
         self.args['remote_PID'] = re.search(r"episodeId = '([^']+)'", epinfo_tag.contents[0].strip()).groups()[0]
         return ThePlatformBaseChannel.action_play_episode(self)
         
-
-    def action_play(self):
-        parse = URLParser(swf_url=self.swf_url)
-        self.plugin.set_stream_url(parse(self.args['clip_url']))        
-            
     def action_browse_series(self):
         url = self.args['remote_url']
         soup = BeautifulSoup(self.plugin.fetch(url,max_age=self.cache_timeout))
@@ -436,20 +413,15 @@ class TouTV(ThePlatformBaseChannel):
             except:
                 plot = '(failed to fetch plot)'
                 
-                
-            action = 'browse_episode'
-            if self.plugin.get_setting("make_playlists") == "true":
-                action = "play_episode"
-                
             data.update({
-                'action': action,
+                'action': 'play_episode',
                 'remote_url': 'http://tou.tv' + row.find('a')['href'],
                 'Title': title,
                 'Thumb': image['src'],
                 'Plot': plot
             })
-            self.plugin.add_list_item(data)
-        self.plugin.end_list()
+            self.plugin.add_list_item(data, is_folder=False)
+        self.plugin.end_list('episodes')
             
     def action_browse_category(self):
         cat = dict(self.categories)[self.args['category']]

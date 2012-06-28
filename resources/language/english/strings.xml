@@ -2,11 +2,8 @@
     <string id="30000">Display Empty Categories (Shows with no clips)</string>
     <string id="30001">HTTP Proxy Server</string>
     <string id="30002">HTTP Proxy Server port</string>
-    <string id="30003">Hide Channels Worse Than</string>
     <string id="30004">Automatically Play Multiple Clips(SVN 32470+)</string>
     <string id="30005">Maximum Bitrate</string>
-    <string id="30006">My librtmp is Awesome!</string>
     <string id="30007">Maximum # of clips to join</string>
     <string id="30008">Cache duration (seconds):</string>
-    <string id="30009">Show Development Channels (not recommended)</string>
 </strings>

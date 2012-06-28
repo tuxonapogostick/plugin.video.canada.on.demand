@@ -6,7 +6,6 @@ non-working stations have been removed.
 
 Supported channels
 - Business News Network
-- Bravo!
 - CBC
 - Comedy
 - CPAC
@@ -25,7 +24,3 @@ Supported channels
 - TSN
 - TVO Kids
 - TVtropolis
-
-Here is a list of channels that cannot be supported currently
-due to technical reasons.
-- CityTV and related (e.g. OMNI) - uses FlashAccess DRM

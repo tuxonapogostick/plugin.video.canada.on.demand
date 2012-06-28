@@ -24,12 +24,10 @@ class URLParser(object):
     url_re = re.compile(r"(?P<scheme>\w+)://(?P<netloc>[\w\d\-\.]+)/(?P<app>\w+)/(?P<playpath>[^\?]+)(?:\?(?P<querystring>.*))?")
     
     def __init__(self, swf_url=None, swf_verify=False, \
-                 force_rtmp=False, playpath_qs=True, 
-                 is_live=False):
+                 playpath_qs=True, is_live=False):
 
         self.swf_url = swf_url
         self.swf_verify = swf_verify
-        self.force_rtmp = force_rtmp
         self.playpath_qs=playpath_qs
         self.is_live = is_live
         
@@ -47,8 +45,6 @@ class URLParser(object):
         self.data = match.groupdict()    
         
     def clean_scheme(self, scheme):
-        if scheme == 'rtmpe' and self.force_rtmp:
-            scheme = 'rtmp'
         return scheme
         
     def clean_app(self, app):
