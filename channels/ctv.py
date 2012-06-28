@@ -186,25 +186,103 @@ class CTVBaseChannel(BaseChannel):
         self.plugin.set_stream_url(url)
         
 
+class CTVNews(CTVBaseChannel):    
+    base_url = 'http://www.ctvnews.ca/video'
+    short_name = 'ctvnews'
+    long_name = 'CTV News'
+    default_action = 'browse'
 
-class CTVLocalNews(CTVBaseChannel):
+    def action_browse(self):
+        if self.args['remote_url']:
+            remote_url = self.args['remote_url']
+        else:
+            remote_url = self.base_url            
+        soup = BeautifulSoup(self.plugin.fetch(remote_url, max_age=self.cache_timeout))
+
+        for category in soup.findAll('dt', {'class': 'videoPlaylistCategories'}):
+            data = {}
+            data.update(self.args)
+            data.update({
+                'action': 'browse_category',
+                'Title': category.a.contents[0],
+                'entry_id': None,
+                'remote_url': remote_url+"/"+category['id']+'?ot=example.AjaxPageLayout.ot&maxItemsPerPage=12',
+                'page_num' : 1
+            })
+            self.plugin.add_list_item(data)
+        self.plugin.end_list()
+
+    def action_browse_category(self):
+        soup = BeautifulSoup(self.plugin.fetch(self.args['remote_url']+"&"+"pageNum="+self.args['page_num'], max_age=self.cache_timeout))
+
+        #print soup
+        for clip in soup.findAll('article', {'class':'videoPackageThumb'}):
+            #print clip
+            thumb = clip.img['src']
+            tagline = clip.h3.string
+            
+            script = clip.findNextSibling()
+            while script:
+                if script.name!='script': break;
+                #print script
+                try:
+                    txt = script.string.strip()
+                except:
+                    pass
+
+                if txt.find('clip.id')>0:
+                    match = re.search('.*clip[.]id = ([0-9]*).*clip[.]title = escape\("(.*)"\).*clip[.]description = escape\("(.*)"\).*',txt,re.DOTALL)
+                    clipId = match.group(1)
+                    title = match.group(2).strip()
+                    plot = match.group(3).strip()
+                    
+                    #print thumb
+                    data = {}
+                    data.update(self.args)
+                    data.update({
+                        'Title': title,
+                        'action': 'play_clip',
+                        'remote_url': clipId,
+                        'clip_id': clipId,
+                        'Thumb': thumb,
+                        'tagline': tagline,
+                        'plot': plot,
+                        'genre': 'News'
+                    })
+                    self.plugin.add_list_item(data, is_folder=False)
+                script = script.findNextSibling()
+        
+        nextPager = soup.find("span", {"class":"videoPaginationNext"})
+        if nextPager and nextPager.find('a'):
+            data = {}
+            data.update(self.args)
+            data.update({
+                'Title': ">>> Next Page",
+                'page_num' : int(self.args["page_num"])+1
+            })
+        self.plugin.add_list_item(data)    
+        
+        self.plugin.end_list()        
+
+
+class CTVLocalNews(CTVNews):
     short_name = 'ctvlocal'
     long_name = 'CTV Local News'
     default_action = 'root'
     
     local_channels = [
-        ('Atlantic', 'atlantic.ctv.ca'),
-        ('British Columbia', 'ctvbc.ctv.ca'),
-        ('Calgary', 'calgary.ctv.ca'),
-        ('Edmonton', 'edmonton.ctv.ca'),
-        ('Kitchener', 'kitchener.ctv.ca'),
-        ('Montreal', 'montreal.ctv.ca'),
-        ('Northern Ontario', 'northernontario.ctv.ca/sudbury'),
-        ('Ottawa', 'ottawa.ctv.ca'),
-        ('Regina', 'regina.ctv.ca'),
-        ('Saskatoon', 'saskatoon.ctv.ca'),
-        ('Toronto', 'toronto.ctv.ca'),
-        ('Winnipeg', 'winnipeg.ctv.ca'),
+        ('Atlantic', 'http://atlantic.ctvnews.ca/video'),
+        ('British Columbia', 'http://bc.ctvnews.ca/video'),
+        ('Calgary', 'http://calgary.ctvnews.ca/video'),
+        ('Edmonton', 'http://edmonton.ctvnews.ca/video'),
+        ('Kitchener', 'http://kitchener.ctvnews.ca/video'),
+        ('Montreal', 'http://montreal.ctvnews.ca/video'),
+        ('Northern Ontario', 'http://northernontario.ctvnews.ca/video'),
+        ('Ottawa', 'http://ottawa.ctvnews.ca/video'),
+        ('Regina', 'http://regina.ctvnews.ca/video'),
+        ('Saskatoon', 'http://saskatoon.ctvnews.ca/video'),
+        ('Toronto', 'http://toronto.ctvnews.ca/video'),
+        ('Winnipeg', 'http://winnipeg.ctvnews.ca/video'),
     ]
 
         
@@ -220,42 +298,6 @@ class CTVLocalNews(CTVBaseChannel):
 
                 'Thumb': self.args['Thumb'],
             })
-        self.plugin.end_list()
-
-        
-    def action_browse(self):
-        soup = BeautifulSoup(self.plugin.fetch("http://%s/" % (self.args['remote_url'],), max_age=self.cache_timeout))
-        for script in soup.findAll('script'):
-            try:
-                txt = script.contents[0].strip()
-            except:
-                continue
-            
-            if txt.startswith("VideoPlaying["):
-                txt = txt.split("{",1)[1].rsplit("}",1)[0]
-                
-                data = {}
-                data.update(self.args)
-                jsobj = parse_javascript_object(txt)
-                data.update({
-                    'Title': jsobj['Title'].split(':',1)[-1].strip(),
-                    'action': 'play_clip',
-                    'remote_url': jsobj['ClipId'],
-                    'clip_id': jsobj['ClipId']
-                })
-                self.plugin.add_list_item(data, is_folder=False)
-            elif txt.startswith("writeBottom("): # only seen in Northern Ontario
-                txt = txt.split("(",1)[1].rsplit('"',1)[0].split(', "')
-                data = {}
-                data.update(self.args)
-                data.update({
-                    'Title': txt[1].split(':',1)[-1].strip(),
-                    'action': 'play_clip',
-                    'remote_url': txt[0],
-                    'clip_id': txt[0]
-                })
-                self.plugin.add_list_item(data, is_folder=False)
-                
         self.plugin.end_list()
 
 
@@ -310,13 +352,6 @@ class TSN(CTVBaseChannel):
     long_name = 'The Sports Network'
     base_url = 'http://watch.tsn.ca/AJAX/'    
     swf_url = 'http://watch.tsn.ca/Flash/player.swf?themeURL=http://watch.ctv.ca/themes/TSN/player/theme.aspx'
-
-
-class CTVNews(CTVBaseChannel):    
-    base_url = 'http://watch.ctv.ca/news/AJAX/'
-    short_name = 'ctvnews'
-    long_name = 'CTV News'
-    swf_url = 'http://watch.ctv.ca/news/Flash/player.swf?themeURL=http://watch.ctv.ca/news/themes/CTVNews/player/theme.aspx'
 
 
 class Discovery(CTVBaseChannel):
