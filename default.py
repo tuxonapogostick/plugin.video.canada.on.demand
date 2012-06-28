@@ -123,7 +123,6 @@ class OnDemandPlugin(object):
         and being subclasses of BaseChannel.
         
         """
-        minimum = int(self.get_setting("worst_channel_support"))
         for channel_code, channel_class in sorted(ChannelMetaClass.registry.channels.iteritems()):
             info = channel_class.get_channel_entry_info()
 
@@ -136,18 +135,7 @@ class OnDemandPlugin(object):
             except ChannelException:
                 logging.warn("Couldn't Find Channel Icon for %s" % (channel_code,))
             
-            if channel_class.in_development and self.get_setting("show_dev_channels") == 'false': 
-                continue
-            
-            if self.get_setting('awesome_librtmp') == "true":
-                self.add_list_item(info)
-            else:
-                if channel_class.status >= minimum:
-                    if channel_class.status == STATUS_BAD:                        
-                        info['Title'] = info['Title'] + " [BAD]"
-                    elif channel_class.status == STATUS_UGLY:
-                        info['Title'] = info['Title'] + " [UGLY]"
-                    self.add_list_item(info)
+            self.add_list_item(info)
         self.end_list()
         
     def get_dialog(self):

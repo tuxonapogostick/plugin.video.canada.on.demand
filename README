@@ -25,7 +25,3 @@ Supported channels
 - TSN
 - TVO Kids
 - TVtropolis
-
-Here is a list of channels that cannot be supported currently
-due to technical reasons.
-- CityTV and related (e.g. OMNI) - uses FlashAccess DRM

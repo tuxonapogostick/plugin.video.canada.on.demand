@@ -176,7 +176,7 @@ class CTVBaseChannel(BaseChannel):
         
     def clipid_to_stream_url(self, clipid):
         rurl = "http://cls.ctvdigital.net/cliplookup.aspx?id=%s" % (clipid)
-        parse = URLParser(swf_url=self.swf_url, force_rtmp=not self.plugin.get_setting("awesome_librtmp") == "true")        
+        parse = URLParser(swf_url=self.swf_url)        
         url = parse(self.plugin.fetch(rurl).read().strip()[17:].split("'",1)[0])
         return url
     
@@ -271,15 +271,16 @@ class CTVLocalNews(CTVNews):
     default_action = 'root'
     
     local_channels = [
+        ('Atlantic', 'http://atlantic.ctvnews.ca/video'),
         ('British Columbia', 'http://bc.ctvnews.ca/video'),
         ('Calgary', 'http://calgary.ctvnews.ca/video'),
         ('Edmonton', 'http://edmonton.ctvnews.ca/video'),
+        ('Kitchener', 'http://kitchener.ctvnews.ca/video'),
         ('Montreal', 'http://montreal.ctvnews.ca/video'),
         ('Northern Ontario', 'http://northernontario.ctvnews.ca/video'),
         ('Ottawa', 'http://ottawa.ctvnews.ca/video'),
         ('Regina', 'http://regina.ctvnews.ca/video'),
         ('Saskatoon', 'http://saskatoon.ctvnews.ca/video'),
-        ('Southwestern Ontario', 'http://swo.ctvnews.ca/video'),
         ('Toronto', 'http://toronto.ctvnews.ca/video'),
         ('Winnipeg', 'http://winnipeg.ctvnews.ca/video'),
     ]
