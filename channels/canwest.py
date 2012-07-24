@@ -159,7 +159,7 @@ class HGTV(CanwestBaseChannel):
     #swf_url = 'http://www.hgtv.ca/includes/cwp/swf/flvPlayer.swf'
 
     def get_categories_json(self,arg):
-        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/HGTV%20Player%20-%20Video%20Center' #urlencode
+        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/HGTVNEWVC%20-%20New%20Video%20Center' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
 
