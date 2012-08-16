@@ -102,7 +102,7 @@ class ThePlatformBaseChannel(BaseChannel):
             cats.append(data)
 
         # for CBC: sort categories (assumes that GroupLevel won't exceed 100000)
-        cats.sort(key=lambda x: int(x['GroupLevel'])*100000+int(x['GroupOrder']) if 'GroupOrder' in x else 0)
+        cats.sort(key=lambda x: int(x.get('GroupLevel', 0))*100000+int(x.get('GroupOrder', 0)))
             
         logging.debug("get_categories cats=%s"%cats)
         return cats
