@@ -216,7 +216,9 @@ class CTVNews(CTVBaseChannel):
         #print soup
         for clip in soup.findAll('article', {'class':'videoPackageThumb'}):
             #print clip
-            thumb = clip.img['src']
+            thumb = None
+            if clip.img.has_key('src'):
+                thumb = clip.img['src']
             tagline = clip.h3.string
             #title = clip.find('p',{'class':'videoPlaylistDescription'}).string
             
