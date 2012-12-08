@@ -4,7 +4,7 @@ import sha
 import cgi
 import xbmc, xbmcaddon, xbmcgui, xbmcplugin
 import logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARNING)
 import urllib,urllib2,urlparse
 import time
 from utils import urldecode
