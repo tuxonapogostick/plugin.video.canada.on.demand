@@ -4,7 +4,7 @@ import sha
 import cgi
 import xbmc, xbmcaddon, xbmcgui, xbmcplugin
 import logging
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.WARNING)
 import urllib,urllib2,urlparse
 import time
 from utils import urldecode
@@ -58,9 +58,9 @@ class OnDemandPlugin(object):
         while retries < retry_limit:
             logging.debug("fetching %s" % (url,))
             # Add referer for CTV to work properly
-            parsed = urlparse.urlparse(url)
+            url_scheme, netloc, path, query, fragment = urlparse.urlsplit(url)
             req = urllib2.Request(url)
-            req.add_header("Referer", "%s://%s/" % (parsed.scheme, parsed.netloc))
+            req.add_header("Referer", "%s://%s/" % (url_scheme, netloc))
             try:            
                 return urllib2.urlopen(req)
             except (urllib2.HTTPError, urllib2.URLError), e:

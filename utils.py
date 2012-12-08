@@ -303,7 +303,7 @@ def urldecode(query):
     d = {}
     a = query.split('&')
     for s in a:
-        if s.find('='):
+        if '=' in s:
             k,v = map(urllib.unquote_plus, s.split('='))
             if v == 'None':
                 v = None
