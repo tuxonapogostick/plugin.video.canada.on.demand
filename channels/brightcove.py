@@ -18,10 +18,6 @@ except ImportError:
     
 class BrightcoveBaseChannel(BaseChannel):
     
-    """
-    None of this works. All videos stop playing after 1 minute.
-    
-    """
     is_abstract = True
     
 
@@ -39,12 +35,13 @@ class BrightcoveBaseChannel(BaseChannel):
         location = base.replace("BrightcoveBootloader.swf", "connection/ExternalConnection_2.swf")
         self.swf_url = location
         
-    def get_clip_info(self, player_id, video_id):
+    def get_clip_info(self, player_id, video_id, publisher_id):
         conn = httplib.HTTPConnection("c.brightcove.com")
-        envelope = self.build_amf_request(player_id, video_id)
-        conn.request("POST", "/services/amfgateway", str(remoting.encode(envelope).read()), {'content-type': 'application/x-amf'})
+        envelope = self.build_amf_request(player_id, video_id, publisher_id)
+        conn.request("POST", "/services/messagebroker/amf?playerid=" +
+                str(player_id), str(remoting.encode(envelope).read()), {'content-type': 'application/x-amf'})
         response = conn.getresponse().read()
-        response = remoting.decode(response).bodies[0][1].body[0]['data']['videoDTO']
+        response = remoting.decode(response).bodies[0][1].body
         logging.debug(response)
         return response
    
@@ -56,36 +53,25 @@ class BrightcoveBaseChannel(BaseChannel):
         rends.sort(key=lambda r: r['encodingRate'])
         return rends[-1]
     
-    def build_amf_request_body(self, player_id, video_id):
+    def build_amf_request_body(self, player_id, video_id, publisher_id):
+        # const b956f752886e0e38a5ad4ffef43f48c839316602, class id?
         return [
-            player_id,
-            {
-                'optimizeFeaturedContent': 1, 
-                'featuredLineupFetchInfo': {
-                    'fetchLevelEnum': 4, 
-                    'contentType': u'VideoLineup', 
-                    'childLimit': 100
-                }, 
-                'lineupRefId': None, 
-                'videoId': video_id, 
-                'videoRefId': None, 
-                'lineupId': None, 
-                'fetchInfos': [
-                    {'fetchLevelEnum': 1, 'contentType': u'VideoLineup', 'childLimit': 100}, 
-                    {'grandchildLimit': 100, 'fetchLevelEnum': 3, 'contentType': u'VideoLineupList', 'childLimit': 100}
+                u'b956f752886e0e38a5ad4ffef43f48c839316602',
+                player_id,
+                video_id,
+                publisher_id,
                 ]
-            }
-        ]
 
 
-    def build_amf_request(self, player_id, video_id):
-        env = remoting.Envelope(amfVersion=0)
+    def build_amf_request(self, player_id, video_id, publisher_id):
+        env = remoting.Envelope(amfVersion=3)
         env.bodies.append(
             (
-                "/2", 
+                "/1",
                 remoting.Request(
-                    target="com.brightcove.templating.TemplatingFacade.getContentForTemplateInstance", 
-                    body=self.build_amf_request_body(player_id, video_id),
+                    target="com.brightcove.player.runtime.PlayerMediaFacade.findMediaById",
+                    body=self.build_amf_request_body(player_id, video_id,
+                        publisher_id),
                     envelope=env
                 )
             )
@@ -145,7 +131,8 @@ class TVOKids(BrightcoveBaseChannel):
         self.plugin.end_list()
             
     def action_play_video(self):
-        info = self.get_clip_info(self.player_id, self.args['bc_id'])
+        info = self.get_clip_info(self.player_id, self.args['bc_id'],
+                self.publisher_id)
         self.video_id = self.args.get('bc_id')
         self.get_swf_url()
         logging.debug(self.swf_url)
