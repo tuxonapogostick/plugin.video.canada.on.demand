@@ -69,7 +69,10 @@ def find_libs():
         except ImportError:
             continue
 
-        t = _get_etree_type(etree)
+        try:
+            t = _get_etree_type(etree)
+        except TypeError:
+            continue
 
         types.append(t)
         mapping[t] = etree
