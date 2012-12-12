@@ -3,18 +3,12 @@ from utils import *
 import json
 import logging
 
-class TreehouseTV(BrightcoveBaseChannel):
+class CorusBaseChannel(BrightcoveBaseChannel):
 
-    short_name = 'treehouse'
-    long_name = 'Treehouse TV'
+    is_abstract = True
+
     default_action = 'root'
     base_url = 'http://media.treehousetv.com'
-
-    # dynamically load this, default id:
-    player_id = 904944191001
-
-    publisher_id = 694915333001
-    flash_experience_id="myExperience"
 
     def action_root(self):
         # JSON data, but missing fields: url = "http://media.treehousetv.com/videos.ashx?c="
@@ -89,3 +83,27 @@ class TreehouseTV(BrightcoveBaseChannel):
         url = "%s app=%s playpath=%s swfUrl=%s swfVfy=true pageUrl=%s" %(tcurl, app, playpath,
                 self.swf_url, "http://media.treehousetv.com")
         self.plugin.set_stream_url(url)
+
+class TreehouseTV(CorusBaseChannel):
+    short_name = 'treehouse'
+    long_name = 'Treehouse TV'
+
+    base_url = 'http://media.treehousetv.com'
+
+    # dynamically load this, default id:
+    player_id = 904944191001
+
+    publisher_id = 694915333001
+    flash_experience_id="myExperience"
+
+class YTV(CorusBaseChannel):
+    short_name = 'ytv'
+    long_name = 'YTV'
+
+    base_url = "http://www.ytv.com/videos"
+
+    # dynamically load this, default id:
+    player_id = 904863021001
+
+    publisher_id = 694915334001
+    flash_experience_id="myExperience"
