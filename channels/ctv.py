@@ -127,8 +127,9 @@ class CTVBaseChannel(BaseChannel):
             xbmc.executebuiltin('XBMC.ActivateWindow(fullscreenvideo)')
             self.plugin.end_list()
 
-    def iter_clip_list(self):
-        url = self.base_url + 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=4&EpisodeID=%s&ForceParentShowID=%s' % (self.args['episode_id'],self.args['show_id'])       
+    def iter_clip_list(self):        
+        url = self.base_url + 'InfiniteScrollingContents.aspx?EpisodeID=%s&NumberToGet=24&StartOffset=1' % (self.args['episode_id'],) #getting max 24 clips should be enough
+#        url = self.base_url + 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=4&EpisodeID=%s&ForceParentShowID=%s' % (self.args['episode_id'],self.args['show_id'])       
         soup = BeautifulStoneSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         
         for li in soup.findAll('li'):
@@ -138,8 +139,9 @@ class CTVBaseChannel(BaseChannel):
             data['action'] = 'play_clip'
             data['Title'] = BeautifulSoup(li.dt.a.text,convertEntities=BeautifulSoup.HTML_ENTITIES).contents[0]
             try:
-                data['Thumb'] = re.search("EpisodeThumbnail:'([^']+)'",text).group(1)
-                data['Plot'] = re.search("Description:'([^']+)'",text).group(1)
+                data['Title'] = re.search("Title:'([^'\\\\]*(\\\\.[^'\\\\]*)*)'",text).group(1)
+                data['Thumb'] = re.search("EpisodeThumbnail:'([^'\\\\]*(\\\\.[^'\\\\]*)*)'",text).group(1)
+                data['Plot'] = re.search("Description:'([^'\\\\]*(\\\\.[^'\\\\]*)*)'",text).group(1)
             except:
                 pass
             data['clip_id'] = re.search("ClipId:'([^']+)'",text).group(1)
