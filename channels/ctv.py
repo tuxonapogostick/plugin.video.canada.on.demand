@@ -59,36 +59,47 @@ class CTVBaseChannel(BaseChannel):
             
         
     def action_browse_season(self):
-        url = "http://esi.ctv.ca/datafeed/pubsetservice.aspx?sid=" + self.args['season_id']
+        url = self.base_url + 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=3&SeasonID=%s&ForceParentShowID=%s' % (self.args['season_id'],self.args['show_id'])
         page = self.plugin.fetch(url, max_age=self.cache_timeout).read()
         soup = BeautifulStoneSoup(page)
-        for ep in soup.overdrive.gateway.contents:
-            if not ep.playlist.contents:
-                continue
+        
+        for li in soup.find('ul').findAll('li'):
+            a = li.find('a', {'id': re.compile('^Episode_\d+$')})
+
             data = {}
             data.update(self.args)
-            data['Title'] = ep.meta.headline.contents[0].strip()
-            data['Plot'] = ep.meta.subhead.contents[0].strip()
-            m,d,y = ep['pubdate'].split("/")
-            data['Date'] = "%s.%s.%s" % (d,m,y)
-            try:
-                data['Thumb'] = ep.meta.image.contents[0].strip()
-            except:
-                pass
+            data['episode_id'] = a['id'][8:]
+            data['videocount'] = re.search("Interface\.GetChildPanel\('Episode',[ \d]+,([ \d]+),",a['onclick']).group(1)
+            data['Title'] = a.text
+
             
-            data['videocount'] = ep['videocount']
-            vc = int(ep['videocount'])
+            vc = int(data['videocount'])
             if vc == 1:
                 action = 'play_episode'
             elif vc <= int(self.plugin.get_setting('max_playlist_size')) \
-                 and self.plugin.get_setting("make_playlists") == "true":
+                and self.plugin.get_setting("make_playlists") == "true":
                 action = 'play_episode'
             else:
                 action = 'browse_episode'
             data['action'] = action
-            data['episode_id'] = ep['id']
+
+            dl = li.find('dl', {'class':'Item'} )
+            if dl:                
+                data['Plot'] = dl.find('dd', {'class':'Description'}).text
+                data['Title'] = dl.find('dd', {'class':'Thumbnail'}).a['title']
+
+                #m,d,y = ep['pubdate'].split("/")
+                #data['Date'] = "%s.%s.%s" % (d,m,y)
+                try:
+                    data['Thumb'] = dl.find('dd', {'class':'Thumbnail'}).img['src']
+                    pos = data['Thumb'].find('.jpg/80/60')
+                    if pos!=-1:
+                        data['Thumb'] = data['Thumb'][:pos]+'.jpg'
+                except:
+                    pass
+            
             self.plugin.add_list_item(data, is_folder=vc != 1)
-        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE, xbmcplugin.SORT_METHOD_LABEL])
+        self.plugin.end_list()
         
     def action_play_episode(self):
         import xbmc
@@ -117,19 +128,36 @@ class CTVBaseChannel(BaseChannel):
             self.plugin.end_list()
 
     def iter_clip_list(self):
-        url = "http://esi.ctv.ca/datafeed/content.aspx?cid=" + self.args['episode_id']
-        soup = BeautifulStoneSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
-        
-        plot = soup.find('content').meta.subhead.contents[0].strip()
-                             
-        for el in soup.find('playlist').findAll('element'):
-            data = {}
-            data.update(self.args)
-            data['action'] = 'play_clip'
-            data['Title'] = el.title.contents[0].strip()
-            data['Plot'] = plot
-            data['clip_id'] = el['id']
-            yield data
+        start_offset = 1
+        number_to_get = 12     
+        url_template = self.base_url + 'InfiniteScrollingContents.aspx?EpisodeID=%s&NumberToGet=%d&StartOffset=%d'
+#        url = self.base_url + 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=4&EpisodeID=%s&ForceParentShowID=%s' % (self.args['episode_id'],self.args['show_id'])       
+
+        while True:
+            url = url_template % (self.args['episode_id'],number_to_get,start_offset)
+            print url
+            page = self.plugin.fetch(url, max_age=self.cache_timeout)
+            soup = BeautifulStoneSoup(page)            
+            start_offset += number_to_get
+            
+            clips = soup.findAll('li')            
+            if len(clips)==0:
+                break
+            
+            for li in clips:
+                text = li.dt.a['onclick']
+                data = {}
+                data.update(self.args)
+                data['action'] = 'play_clip'
+                data['Title'] = BeautifulSoup(li.dt.a.text,convertEntities=BeautifulSoup.HTML_ENTITIES).contents[0]
+                try:
+                    data['Title'] = re.search("Title:'([^'\\\\]*(\\\\.[^'\\\\]*)*)'",text).group(1).replace("\\'","'")
+                    data['Thumb'] = re.search("EpisodeThumbnail:'([^'\\\\]*(\\\\.[^'\\\\]*)*)'",text).group(1)
+                    data['Plot'] = re.search("Description:'([^'\\\\]*(\\\\.[^'\\\\]*)*)'",text).group(1)
+                except:
+                    pass
+                data['clip_id'] = re.search("ClipId:'([^']+)'",text).group(1)
+                yield data
             
     def action_browse_episode(self):
         logging.debug("ID: %s" % (self.args['episode_id'],))
@@ -213,7 +241,6 @@ class CTVNews(CTVBaseChannel):
     def action_browse_category(self):
         soup = BeautifulSoup(self.plugin.fetch("%s/%s?ot=example.AjaxPageLayout.ot&maxItemsPerPage=12&pageNum=%s"%(self.args['remote_url'],self.args["category_id"],self.args['page_num']), 
                         max_age=self.cache_timeout))
-        #print soup
         for clip in soup.findAll('article', {'class':'videoPackageThumb'}):
             #print clip
             thumb = None
@@ -249,7 +276,7 @@ class CTVNews(CTVBaseChannel):
                 for script in scripts:
                     txt = script.string.strip()
                     if txt.find('clip.id')>=0:
-                        match = re.search('.*clip[.]id = ([0-9]*).*clip[.]title = escape\("(.*)"\).*clip[.]description = escape\("(.*)"\).*',txt,re.DOTALL)
+                        match = re.search('.*clip[.]id = ([0-9]*).*clip[.]title = "(.+?)".*clip[.]description = "(.+?)"',txt,re.DOTALL)
                         clipId = match.group(1)
                         title = match.group(2).strip()
                         plot = match.group(3).strip()
