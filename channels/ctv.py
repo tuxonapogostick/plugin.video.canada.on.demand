@@ -275,8 +275,9 @@ class CTVNews(CTVBaseChannel):
             else:
                 for script in scripts:
                     txt = script.string.strip()
+                    print txt.encode('ascii', 'ignore')
                     if txt.find('clip.id')>=0:
-                        match = re.search('.*clip[.]id = ([0-9]*).*clip[.]title = "(.+?)".*clip[.]description = "(.+?)"',txt,re.DOTALL)
+                        match = re.search('.*clip[.]id = ([0-9]*).*clip[.]title = "(.+?)".*clip[.]description = "(.*)"',txt,re.DOTALL)
                         clipId = match.group(1)
                         title = match.group(2).strip()
                         plot = match.group(3).strip()
