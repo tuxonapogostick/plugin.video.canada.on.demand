@@ -135,7 +135,6 @@ class CTVBaseChannel(BaseChannel):
 
         while True:
             url = url_template % (self.args['episode_id'],number_to_get,start_offset)
-            print url
             page = self.plugin.fetch(url, max_age=self.cache_timeout)
             soup = BeautifulStoneSoup(page)            
             start_offset += number_to_get
@@ -242,7 +241,6 @@ class CTVNews(CTVBaseChannel):
         soup = BeautifulSoup(self.plugin.fetch("%s/%s?ot=example.AjaxPageLayout.ot&maxItemsPerPage=12&pageNum=%s"%(self.args['remote_url'],self.args["category_id"],self.args['page_num']), 
                         max_age=self.cache_timeout))
         for clip in soup.findAll('article', {'class':'videoPackageThumb'}):
-            #print clip
             thumb = None
             if clip.img.has_key('src'):
                 thumb = clip.img['src']
@@ -275,14 +273,12 @@ class CTVNews(CTVBaseChannel):
             else:
                 for script in scripts:
                     txt = script.string.strip()
-                    print txt.encode('ascii', 'ignore')
                     if txt.find('clip.id')>=0:
                         match = re.search('.*clip[.]id = ([0-9]*).*clip[.]title = "(.+?)".*clip[.]description = "(.*)"',txt,re.DOTALL)
                         clipId = match.group(1)
                         title = match.group(2).strip()
                         plot = match.group(3).strip()
                         
-                        #print thumb
                         data = {}
                         data.update(self.args)
                         data.update({
@@ -313,7 +309,6 @@ class CTVNews(CTVBaseChannel):
         soup = BeautifulSoup(self.plugin.fetch("%s/%s?ot=example.AjaxPageLayout.ot&maxItemsPerPage=12&pageNum=%s"%(self.args['remote_url'],self.args["playlist_id"],self.args['page_num']), 
                         max_age=self.cache_timeout))
         for clip in soup.findAll('article', {'class':'videoClipThumb'}):
-            #print clip
             thumb = clip.img['src']
             tagline = clip.h3.a.string
             clipId = clip['id']
