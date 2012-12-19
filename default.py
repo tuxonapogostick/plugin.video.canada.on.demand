@@ -221,7 +221,7 @@ class OnDemandPlugin(object):
             bookmark_url = self.get_url(bminfo)
             context_menu_items.append(("Remove From Bookmarks", "XBMC.RunPlugin(%s)" % (bookmark_url,)))
             
-        info.setdefault('Thumb', 'None')
+        info.setdefault('Thumb', '')
         info.setdefault('Icon', info['Thumb'])
         if 'Rating' in info:
             del info['Rating']
