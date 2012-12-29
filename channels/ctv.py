@@ -312,7 +312,8 @@ class CTVNews(CTVBaseChannel):
             thumb = clip.img['src']
             tagline = clip.h3.a.string
             clipId = clip['id']
-            plot = clip.p.string.strip()
+            plot = clip.p.string
+            if plot: plot = plot.strip()
             data = {}
             data.update(self.args)
             data.update({
