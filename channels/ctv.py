@@ -98,7 +98,7 @@ class CTVBaseChannel(BaseChannel):
                 except:
                     pass
             
-            self.plugin.add_list_item(data, is_folder=vc != 1)
+            self.plugin.add_list_item(data, is_folder=(data['action']!='play_episode'))
         self.plugin.end_list()
         
     def action_play_episode(self):
