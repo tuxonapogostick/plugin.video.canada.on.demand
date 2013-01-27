@@ -224,7 +224,7 @@ class CTVNews(CTVBaseChannel):
             self.args['remote_url'] = self.base_url
         soup = BeautifulSoup(self.plugin.fetch(self.args['remote_url'], max_age=self.cache_timeout))
 
-        for category in soup.findAll('dt', {'class': 'videoPlaylistCategories'}):
+        for category in soup.findAll('dt', 'videoPlaylistCategories'):
             data = {}
             data.update(self.args)
             data.update({
