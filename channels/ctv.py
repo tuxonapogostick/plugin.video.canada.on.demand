@@ -240,7 +240,7 @@ class CTVNews(CTVBaseChannel):
     def action_browse_category(self):
         soup = BeautifulSoup(self.plugin.fetch("%s/%s?ot=example.AjaxPageLayout.ot&maxItemsPerPage=12&pageNum=%s"%(self.args['remote_url'],self.args["category_id"],self.args['page_num']), 
                         max_age=self.cache_timeout))
-        for clip in soup.findAll('article', {'class':'videoPackageThumb'}):
+        for clip in soup.findAll('article', {'class':'videoClipThumb'}):
             thumb = None
             if clip.img.has_key('src'):
                 thumb = clip.img['src']
@@ -276,7 +276,7 @@ class CTVNews(CTVBaseChannel):
                     if txt.find('clip.id')>=0:
                         match = re.search('.*clip[.]id = ([0-9]*).*clip[.]title = "(.+?)".*clip[.]description = "(.*)"',txt,re.DOTALL)
                         clipId = match.group(1)
-                        title = match.group(2).strip()
+                        title = match.group(2).strip().decode('string-escape')
                         plot = match.group(3).strip()
                         
                         data = {}
