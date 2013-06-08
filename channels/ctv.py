@@ -282,7 +282,7 @@ class CTVNews(CTVBaseChannel):
                         data = {}
                         data.update(self.args)
                         data.update({
-                            'Title': title,
+                            'Title': title.decode('unicode_escape'),
                             'action': 'play_clip',
                             'remote_url': clipId,
                             'clip_id': clipId,
@@ -317,7 +317,7 @@ class CTVNews(CTVBaseChannel):
             data = {}
             data.update(self.args)
             data.update({
-                'Title': tagline,
+                'Title': tagline.decode('unicode_escape'),
                 'action': 'play_clip',
                 'remote_url': clipId,
                 'clip_id': clipId,
