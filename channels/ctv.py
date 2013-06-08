@@ -336,17 +336,21 @@ class CTVLocalNews(CTVNews):
     
     local_channels = [
         ('Atlantic', 'http://atlantic.ctvnews.ca/video'),
+        ('Barrie', 'http://barrie.ctvnews.ca/video'),
         ('British Columbia', 'http://bc.ctvnews.ca/video'),
         ('Calgary', 'http://calgary.ctvnews.ca/video'),
         ('Edmonton', 'http://edmonton.ctvnews.ca/video'),
         ('Kitchener', 'http://kitchener.ctvnews.ca/video'),
+        ('London', 'http://london.ctvnews.ca/video'),
         ('Montreal', 'http://montreal.ctvnews.ca/video'),
         ('Northern Ontario', 'http://northernontario.ctvnews.ca/video'),
         ('Ottawa', 'http://ottawa.ctvnews.ca/video'),
         ('Regina', 'http://regina.ctvnews.ca/video'),
         ('Saskatoon', 'http://saskatoon.ctvnews.ca/video'),
         ('Toronto', 'http://toronto.ctvnews.ca/video'),
+        ('Windsor', 'http://windsor.ctvnews.ca//video'),
         ('Winnipeg', 'http://winnipeg.ctvnews.ca/video'),
+        ('Vancouver Island', 'http://vancouverisland.ctvnews.ca/video'),
     ]
 
         
