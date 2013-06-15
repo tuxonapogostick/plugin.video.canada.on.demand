@@ -89,18 +89,19 @@ class GlobalNewsTest(CanwestBaseChannel):
     short_name = 'globalnewstest'
     long_name = 'Global News TEST'
     local_channels = [
-        ('National','http://globalnews.ca/national/videos'),
-        ('BC', 'http://globalnews.ca/national/videos'),
-        ('Calgary', 'http://globalnews.ca/national/videos'),
-        ('Halifax', 'http://globalnews.ca/national/videos'),
-        ('Edmonton', 'http://globalnews.ca/national/videos'),
-        ('Lethbridge', 'http://globalnews.ca/national/videos'),
-        ('Montreal', 'http://globalnews.ca/national/videos'),
-        ('New Brunswick', 'http://globalnews.ca/national/videos'),
-        ('Regina', 'http://globalnews.ca/national/videos'),
-        ('Saskatoon', 'http://globalnews.ca/national/videos'),
-        ('Toronto', 'http://globalnews.ca/national/videos'),
-        ('Winnipeg', 'http://globalnews.ca/national/videos'),
+        ('National', 'http://globalnews.ca/national/videos'),
+        ('BC', 'http://globalnews.ca/bc/videos'),
+        ('Calgary', 'http://globalnews.ca/calgary/videos'),
+        ('Halifax', 'http://globalnews.ca/halifax/videos'),
+        ('Edmonton', 'http://globalnews.ca/edmonton/videos'),
+        ('Lethbridge', 'http://globalnews.ca/lethbridge/videos'),
+        ('Montreal', 'http://globalnews.ca/montreal/videos'),
+        ('New Brunswick', 'http://globalnews.ca/new-brunswick/videos'),
+        ('Okanagan', 'http://globalnews.ca/okanagan/videos'),
+        ('Regina', 'http://globalnews.ca/regina/videos'),
+        ('Saskatoon', 'http://globalnews.ca/saskatoon/videos'),
+        ('Toronto', 'http://globalnews.ca/toronto/videos'),
+        ('Winnipeg', 'http://globalnews.ca/winnipeg/videos'),
     ]
 
     def get_cache_key(self):
@@ -118,19 +119,22 @@ class GlobalNewsTest(CanwestBaseChannel):
         self.plugin.end_list()
 
     def action_browse(self):
-
         caturl = dict(self.local_channels)[self.args['local_channel']]
 
-        #logging.debug('______________________________')
-        #logging.debug('caturl: %s' % caturl)
-        #logging.debug(self.args)
-        #logging.debug('______________________________')
+        logging.debug('______________________________')
+        logging.debug('caturl: %s' % caturl)
+        logging.debug(self.args)
+        #logging.debug(self.args['local_channel'])
+        logging.debug('______________________________')
 
         soup = BeautifulSoup(self.plugin.fetch(caturl, max_age=self.cache_timeout))
         navlist = soup.findAll('div', 'video-navigation-column')
 
-        for ltag in navlist:
-            catlinks = ltag.findAll('a')
+        for index in range(len(navlist)):
+            if (index == 0) and (self.args['local_channel'] == 'National'):
+                continue
+
+            catlinks = navlist[index].findAll('a')
 
             for category in catlinks:
                 data = {}
@@ -138,9 +142,6 @@ class GlobalNewsTest(CanwestBaseChannel):
 
                 tagline = category.string
                 url = category['href']
-
-                # TODO: replace first one with local channel link
-                # because it comes in as /default/
 
                 data.update({
                     'action': 'browse_category',
@@ -155,7 +156,7 @@ class GlobalNewsTest(CanwestBaseChannel):
     def action_browse_category(self):
         #logging.debug('______________________________')
         #logging.debug(self.args)
-        logging.debug('______________________________')
+        #logging.debug('______________________________')
 
         # using RSS cuz json was not working
         # json.loads was complaining
@@ -167,7 +168,6 @@ class GlobalNewsTest(CanwestBaseChannel):
         #logging.debug(eplist)
 
         for ep in eplist:
-            # TODO: need to parse this into minutes
             spans = ep.findAll('span')
             duration = spans[len(spans)-1].string
 
@@ -175,6 +175,10 @@ class GlobalNewsTest(CanwestBaseChannel):
 
             # TODO: not sure why this is not loading...
             thumb = ep.img['src']
+            if thumb:
+                thumb = thumb.replace('&w=300', '')
+
+            #logging.debug(thumb)
 
             data = {}
             data.update(self.args)
@@ -183,7 +187,7 @@ class GlobalNewsTest(CanwestBaseChannel):
                 'action': 'play_episode',
                 'entry_id': None,
             	'Title': tagline,
-            	#'Duration' : duration,
+            	'Duration' : duration,
             	'Thumb' : thumb,
             	'tagline': tagline,
             	'remote_url': platform_url % ep.findAll('span')[1]['data-v_count_id']
