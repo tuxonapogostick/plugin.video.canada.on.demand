@@ -348,7 +348,7 @@ class CTVLocalNews(CTVNews):
         ('Regina', 'http://regina.ctvnews.ca/video'),
         ('Saskatoon', 'http://saskatoon.ctvnews.ca/video'),
         ('Toronto', 'http://toronto.ctvnews.ca/video'),
-        ('Windsor', 'http://windsor.ctvnews.ca//video'),
+        ('Windsor', 'http://windsor.ctvnews.ca/video'),
         ('Winnipeg', 'http://winnipeg.ctvnews.ca/video'),
         ('Vancouver Island', 'http://vancouverisland.ctvnews.ca/video'),
     ]
