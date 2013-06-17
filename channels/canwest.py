@@ -84,7 +84,7 @@ class GlobalTV(CanwestBaseChannel):
         logging.debug('get_releases_json: %s'%url)
         return url
 
-class GlobalNewsTest(CanwestBaseChannel):
+class GlobalNews(CanwestBaseChannel):
     base_url = 'http://globalnews.ca/national/videos'
     short_name = 'globalnews'
     long_name = 'Global News'
