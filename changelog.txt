@@ -1,3 +1,5 @@
+0.7.9 - Fixed Canwest channels (GlobalTV/News, Slice, HGTV...)
+
 0.7.4 - Added setting to hide 'In Development' channels.
 
 0.7.3 - fixed CityTV Crash
@@ -8,7 +10,7 @@
 
 0.7.0 - Overhaul caching backend
 
-0.6.10 - Added experimental Muchmusic Jukebox feature. 
+0.6.10 - Added experimental Muchmusic Jukebox feature.
 
 0.6.9 - Caching progress dialog added.
 
@@ -44,12 +46,12 @@
 
 0.4.1 - Added CMT
 
-0.4.0 - Added a new Backend for CTV Channels. 
+0.4.0 - Added a new Backend for CTV Channels.
 
 0.3.8 - Added support for XBMCs with awesome librtmp support
       - removed the use_rtmp context menu entry, now we just use it
         on the channels that it works for, if your librtmp isnt awesome
-	
+
 0.3.7 - Improved sorting
 
 0.3.6 - added Family.ca [BAD] all streams appear to require type 9 handshake
@@ -68,7 +70,7 @@
 
 0.3.1 - set an icon for 'all channels'
 
-0.3.0 - Added a new 'Bookmarks' Feature.  Any folder in any channel can be "Bookmarked" 
+0.3.0 - Added a new 'Bookmarks' Feature.  Any folder in any channel can be "Bookmarked"
         and easily accessed from the top level of the plugin.
 
 0.2.4 - Fixed TVTropolis & Showcase
@@ -76,25 +78,25 @@
 0.2.3 - Added Support for Tou.TV [Still has some unicode issues]
 
 0.2.2 - Fixed YTV And Treehouse Support
-      - Improved(?) CBC Support, but marked as Ugly, 
+      - Improved(?) CBC Support, but marked as Ugly,
       - category/release listings aren't quite right.
-      
+
 0.2.1 - 0.2.0 was completely broken. sorry :)
 
 0.2.0 - this is the first official release.
       - Cleaned up some code
-      - reversed the order of the changelog :) 
-      
+      - reversed the order of the changelog :)
 
-0.1.11 - Added a setting 'Automatically Play All Clips' which eliminates the 
-         'clip-level' listing for all channels and attempts to play all clips 
-         as a single playlist. The setting is disabled by default and will only 
-         work with XBMC svn r32470+.	
-	 
+
+0.1.11 - Added a setting 'Automatically Play All Clips' which eliminates the
+         'clip-level' listing for all channels and attempts to play all clips
+         as a single playlist. The setting is disabled by default and will only
+         work with XBMC svn r32470+.
+
 0.1.10 - Straightenend out the good/ugly/bad situation
-	 
+
 0.1.9 - Added CTV Local News.
-	
+
 0.1.8 - Added Global BC which was overlooked in 0.1.7
 
 0.1.7 - Implemented in new, more flexible URLParser
@@ -103,7 +105,7 @@
 
 0.1.6 - added global news icon
 
-0.1.5 - Added Full Global News Support        
+0.1.5 - Added Full Global News Support
 
 0.1.4 - Canwest channels now properly hide empty categories
       - added context menu entry to queue video clips
@@ -121,15 +123,15 @@
 
 0.1.0 - major: theplatformbase suprclass, CBC fix
 
-0.0.8 - added port number to http proxy settings 
+0.0.8 - added port number to http proxy settings
 
 0.0.7 - added (untested) http proxy support
 
-0.0.6 - Improved playback of with CBC and Canwest streams. 
-      
+0.0.6 - Improved playback of with CBC and Canwest streams.
+
 0.0.5 - Fixed a big bad bug in 0.0.4 which broke all canwest channels.
 
 0.0.4 - added plugin settings support.
       - fixed cbc regression
-      
+
 0.0.3 - added A bunch of new channels.
