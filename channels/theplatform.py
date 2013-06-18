@@ -12,7 +12,7 @@ try:
     has_pyamf = True
 except ImportError:
     has_pyamf = False
-    
+
 class ThePlatformBaseChannel(BaseChannel):
     is_abstract = True
     base_url = None
@@ -37,9 +37,9 @@ class ThePlatformBaseChannel(BaseChannel):
 
     def get_cache_key(self):
         return self.short_name
-    
+
     def get_cached_categories(self, parent_id):
-        
+
         categories = None
 
         fpath = os.path.join(self.plugin.get_cache_dir(), 'canada.on.demand.%s.categories.cache' % (self.get_cache_key(),))
@@ -56,7 +56,7 @@ class ThePlatformBaseChannel(BaseChannel):
             logging.debug('http-retrieving categories')
             url = self.get_categories_json(parent_id)
             logging.debug('get_cached_categories(p_id=%s) url=%s'%(parent_id, url))
-        
+
             categories = self.parse_callback(self.plugin.fetch(url, self.cache_timeout).read())['items']
             if self.category_cache_timeout > 0:
                 fpath = os.path.join(self.plugin.get_cache_dir(), 'canada.on.demand.%s.categories.cache' % (self.short_name,))
@@ -66,7 +66,7 @@ class ThePlatformBaseChannel(BaseChannel):
 
         return categories
 
-    
+
     def get_categories(self, parent_id=None):
 
         categories = self.get_cached_categories(parent_id)
@@ -75,7 +75,7 @@ class ThePlatformBaseChannel(BaseChannel):
         #  - CBC does an actual drill-down on parentId
         #  - Canwest uses string-matching on the fullTitle field
         categories = self.get_child_categories(categories, parent_id)
-            
+
         cats = []
         for c in categories:
             #logging.debug(c)
@@ -89,7 +89,7 @@ class ThePlatformBaseChannel(BaseChannel):
                 'action': 'browse',
                 'force_cache_update': False,
             })
-            
+
             #cbc-only, so check if key is present on other providers (Canwest)
             if 'customData' in c:
                 for dict in c['customData']:
@@ -98,33 +98,33 @@ class ThePlatformBaseChannel(BaseChannel):
                             #dict['value'] = "''"
                         #if dict['value'] != '':
                         data.update({dict['title']: dict['value']},) #urlquoteval(dict['value'])
-                
+
             cats.append(data)
 
         # for CBC: sort categories (assumes that GroupLevel won't exceed 100000)
         cats.sort(key=lambda x: int(x.get('GroupLevel', 0))*100000+int(x.get('GroupOrder', 0)))
-            
+
         logging.debug("get_categories cats=%s"%cats)
         return cats
 
 
-    def get_releases(self, parameter): #category_id for Canwest, a customData dict for CBC 
+    def get_releases(self, parameter): #category_id for Canwest, a customData dict for CBC
         logging.debug('get_releases (parameter=%s)'%parameter)
-        
-        url = self.get_releases_json(parameter) #has a %s in it--  Canwest:a real cat_id, CBC: the customTags, 
+
+        url = self.get_releases_json(parameter) #has a %s in it--  Canwest:a real cat_id, CBC: the customTags,
         logging.debug('get_releases url=%s'%url)
-        
+
         data = self.parse_callback(self.plugin.fetch(url, max_age=self.cache_timeout).read())
         max_bitrate = int(self.plugin.get_setting('max_bitrate'))
-        
+
         rels = []
         for item in data['items']:
             item['bitrate'] = int(item['bitrate'])/1024
             item_date = time.strftime('%d.%m.%Y', time.localtime(item['airdate']/1000))
             if (not rels) or (rels[-1]['Title'] != item['title']) or (rels[-1]['medialen'] != item['length']):
-                
+
                 action = 'play_episode'
-                
+
                 rels.append({
                     'Thumb': item['thumbnailURL'],
                     'Title': item['title'],
@@ -143,7 +143,7 @@ class ThePlatformBaseChannel(BaseChannel):
                 if item['bitrate'] <= max_bitrate and item['bitrate'] > rels[-1]['bitrate']:
                     rels.pop()
                     action = 'play_episode'
-                    
+
                     rels.append({
                         'Thumb': item['thumbnailURL'],
                         'Title': item['title'],
@@ -157,8 +157,8 @@ class ThePlatformBaseChannel(BaseChannel):
                         'bitrate': item['bitrate'],
                         'medialen': item['length']
                     })
-                    
-                
+
+
         return rels
 
 
@@ -206,6 +206,10 @@ class ThePlatformBaseChannel(BaseChannel):
         for i, ref in enumerate(soup.findAll('ref')):
             base_url = ''
             playpath = None
+
+            # skip the ads
+            if ref['src'].startswith('pfadx///'):
+                continue
 
             if ref['src'].startswith('rtmp://'): #all other channels type of SMIL
             #the meta base="http:// is actually the prefix to an adserver
@@ -255,7 +259,7 @@ class ThePlatformBaseChannel(BaseChannel):
             data['action'] = 'play'
             results.append(data)
         return results
-    
+
     def action_play_episode(self):
         items = self.get_episode_list_data(self.args['remote_PID'])
         if len(items) != 1: raise RuntimeError('theplatform len(items) should be 1')
@@ -265,7 +269,7 @@ class ThePlatformBaseChannel(BaseChannel):
     @classmethod
     def get_channel_entry_info(self):
         """
-        This method is responsible for returning the info 
+        This method is responsible for returning the info
         used to generate the Channel listitem at the plugin's
         root level.
 
@@ -280,8 +284,8 @@ class ThePlatformBaseChannel(BaseChannel):
         }
 
 
-    
-    
+
+
 class CBCChannel(ThePlatformBaseChannel):
     PID = "_DyE_l_gC9yXF9BvDQ4XNfcCVLS4PQij"
     base_url = 'http://cbc.feeds.theplatform.com/ps/JSON/PortalService/2.2/'
@@ -297,7 +301,7 @@ class CBCChannel(ThePlatformBaseChannel):
     #it is overwritten in action_root
     in_root = False
     category_json = '&query=ParentIDs|'
-   
+
     def get_categories_json(self, arg):
         logging.debug('get_categories_json arg=%s, categ_json=%s'%(arg, self.category_json))
         url = ThePlatformBaseChannel.get_categories_json(self) + \
@@ -328,7 +332,7 @@ class CBCChannel(ThePlatformBaseChannel):
 
         logging.debug('get_releases_json: %s'%url)
         return url
-        
+
     def get_child_categories(self, categorylist, parent_id):
         if parent_id is None:
             categories = [c for c in categorylist \
@@ -345,13 +349,13 @@ class CBCChannel(ThePlatformBaseChannel):
 
     def action_root(self):
         logging.debug('CBCChannel::action_root')
-        
+
         #all CBC sections = ['Shows,Sports,News,Kids,Radio']
         self.category_json = ''
         self.in_root = True #just for annoying old CBC
         self.category_json = '&query=FullTitles|Shows,Sports,News,Radio'
         categories = self.get_categories(None)
-        
+
         for cat in categories:
             cat.update({'Title': 'CBC %s'%cat['Title']})
             self.plugin.add_list_item(cat)
@@ -369,7 +373,7 @@ class TouTV(ThePlatformBaseChannel):
     base_url = 'http://www.tou.tv/repertoire/'
     swf_url = 'http://static.tou.tv/lib/ThePlatform/4.2.9c/swf/flvPlayer.swf'
     default_action = 'root'
-    
+
     categories = [
             ("animation","Animation"),
             ("entrevues-varietes", "Entrevues et varietes"),
@@ -379,21 +383,21 @@ class TouTV(ThePlatformBaseChannel):
             ("spectacles-evenements", "Spectacles et evenements"),
             ("webteles",u"Webteles"),
     ]
-  
+
     def action_play_episode(self):
         url = self.args['remote_url']
         soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         scripts = soup.findAll('script')
-        
+
         epinfo_tag = [s for s in scripts if s.contents and s.contents[0].strip().startswith("// Get IP address and episode ID")][0]
         self.args['remote_PID'] = re.search(r"episodeId = '([^']+)'", epinfo_tag.contents[0].strip()).groups()[0]
         return ThePlatformBaseChannel.action_play_episode(self)
-        
+
     def action_browse_series(self):
         url = self.args['remote_url']
         soup = BeautifulSoup(self.plugin.fetch(url,max_age=self.cache_timeout))
         for row in soup.findAll('div', {'class': 'blocepisodeemission'}):
-            
+
             data = {}
             data.update(self.args)
             images = row.findAll('img')
@@ -401,22 +405,22 @@ class TouTV(ThePlatformBaseChannel):
                 image = images[1]
             else:
                 image = images[0]
-                
+
             title = decode_htmlentities(row.find('a', {'class': 'episode'}).b.contents[0],)[:-1]
-            
+
             try:
                 seasonp = [p for p in row.findAll('p') if 'class' in dict(p.attrs)][0]
                 season = seasonp.contents[0].strip()
                 title = season + ": " + title
             except:
                 pass
-                
+
             try:
                 plotp = [p for p in row.findAll('p') if 'class' not in dict(p.attrs)][0]
                 plot = plotp.contents[0].strip()
             except:
                 plot = '(failed to fetch plot)'
-                
+
             data.update({
                 'action': 'play_episode',
                 'remote_url': 'http://tou.tv' + row.find('a')['href'],
@@ -426,7 +430,7 @@ class TouTV(ThePlatformBaseChannel):
             })
             self.plugin.add_list_item(data, is_folder=False)
         self.plugin.end_list('episodes')
-            
+
     def action_browse_category(self):
         cat = dict(self.categories)[self.args['category']]
         logging.debug("CAT: %s" % (cat,))
@@ -441,12 +445,12 @@ class TouTV(ThePlatformBaseChannel):
                 'remote_url': 'http://tou.tv' + a['href'],
                 'Title': a.find('h1').contents[0],
             })
-            
+
             self.plugin.add_list_item(data)
         self.plugin.end_list()
-        
+
     def action_root(self):
-        
+
         for cat in self.categories:
             data = {}
             data.update(self.args)
@@ -456,8 +460,8 @@ class TouTV(ThePlatformBaseChannel):
                 'category': cat[0],
                 'Title': cat[1],
             })
-            
+
             self.plugin.add_list_item(data)
         self.plugin.end_list()
-        
-        
+
+
