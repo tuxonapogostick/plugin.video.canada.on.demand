@@ -216,7 +216,7 @@ class HistoryTV(CanwestBaseChannel):
     swf_url = 'http://www.history.ca/video/cwp/swf/flvPlayer.swf'
 
     def get_categories_json(self,arg):
-        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/History%20Player%20-%20Video%20Center' #urlencode
+        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/History%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
 
@@ -228,7 +228,7 @@ class FoodNetwork(CanwestBaseChannel):
     #swf_url = 'http://webdata.globaltv.com/global/canwestPlayer/swf/4.1/flvPlayer.swf'
 
     def get_categories_json(self,arg):
-        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/FOODNET%20Player%20-%20Video%20Centre' #urlencode
+        url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/FOODNVC%20-%20New%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url
 
@@ -292,5 +292,27 @@ class diyNet(CanwestBaseChannel):
 
     def get_categories_json(self,arg):
         url = CanwestBaseChannel.get_categories_json(self,arg) + '&query=CustomText|PlayerTag|z/DIY%20Network%20-%20Video%20Centre' #urlencode
+        logging.debug('get_categories_json: %s'%url)
+        return url
+
+
+class LifetimeCanada(CanwestBaseChannel):
+    short_name = 'lifetime'
+    long_name = 'Lifetime Canada'
+    PID = 'z2M86QTPdxuM0WwRUiM0WP0E5AzyszT4'
+
+    def get_categories_json(self, arg=None):
+        url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/LIFETIME%20Player%20-%20Video%20Centre' #urlencode
+        logging.debug('get_categories_json: %s'%url)
+        return url
+
+
+class ActionTV(CanwestBaseChannel):
+    short_name = 'action'
+    long_name = 'ActionTV'
+    PID = 'gQ3jcVrUUZC_VoCqnqv_Tn_Q3BRUYIrl'
+
+    def get_categories_json(self, arg=None):
+        url = CanwestBaseChannel.get_categories_json(self) + '&query=CustomText|PlayerTag|z/Action%20Video%20Centre' #urlencode
         logging.debug('get_categories_json: %s'%url)
         return url

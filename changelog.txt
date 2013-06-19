@@ -1,3 +1,6 @@
+0.8.0 - Added Lifetime Canada, ActionTV
+      - Updated History, Food Network
+
 0.7.9 - Fixed Canwest channels (GlobalTV/News, Slice, HGTV...)
 
 0.7.4 - Added setting to hide 'In Development' channels.
