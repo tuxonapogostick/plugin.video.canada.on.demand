@@ -88,6 +88,9 @@ class ThePlatformBaseChannel(BaseChannel):
                 'Plot': c['description'],
                 'action': 'browse',
                 'force_cache_update': False,
+                'hasReleases': c['hasReleases'],
+                'hasChildren': c['hasChildren'],
+                'depth': c['depth']
             })
 
             #cbc-only, so check if key is present on other providers (Canwest)
