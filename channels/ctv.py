@@ -430,13 +430,26 @@ class Bravo(CTVBaseChannel):
 
             data['action'] = 'play_clip'
             data['Title'] = soup.find('headline').string
+            data['Thumb'] = soup.find('image').string
             try:
                 data['Title'] = item.title.string
                 data['Plot'] = soup.find('subhead').string
-                data['Thumb'] = soup.find('image').string
+                data['Thumb'] = soup.imageurl.string
             except: pass
             data['clip_id'] = item['id']
             yield data
+
+    def action_play_clip(self):
+        url_template = 'http://esi.ctv.ca/datafeed/flv/urlgenjsext.aspx?formatid=26&vid=%s'
+        url = url_template % self.args['clip_id']
+        logging.debug('clip url: %r' % url)
+
+        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
+        temp = soup.string.split("'")[1]
+        video_url = temp.split('?')[0]
+
+        logging.debug("Playing Stream: %s" % (video_url,))
+        self.plugin.set_stream_url(video_url)
 
 
 class CTV(CTVBaseChannel):
