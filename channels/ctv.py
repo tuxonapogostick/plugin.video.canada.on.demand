@@ -397,7 +397,7 @@ class Bravo(CTVBaseChannel):
                 'channel': self.short_name,
                 'show_url': show_url
             })
-        self.plugin.end_list()
+        self.plugin.end_list('tvshows', [xbmcplugin.SORT_METHOD_LABEL])
 
     def action_browse(self):
         soup = BeautifulSoup(self.plugin.fetch(self.args['show_url'], max_age=self.cache_timeout))
@@ -415,7 +415,7 @@ class Bravo(CTVBaseChannel):
                 'channel': self.short_name,
                 'episode_id': ep_id
             })
-        self.plugin.end_list()
+        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
 
     def iter_clip_list(self):
         url_template = 'http://app01.ctvdigital.com/ctvesi/datafeed/content_much.aspx?cid=%s'
@@ -444,8 +444,8 @@ class Bravo(CTVBaseChannel):
         url = url_template % self.args['clip_id']
         logging.debug('clip url: %r' % url)
 
-        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
-        temp = soup.string.split("'")[1]
+        page = self.plugin.fetch(url).read().strip()
+        temp = page.split("'")[1]
         video_url = temp.split('?')[0]
 
         logging.debug("Playing Stream: %s" % (video_url,))
