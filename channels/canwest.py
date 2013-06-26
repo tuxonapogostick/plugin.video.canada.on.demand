@@ -270,12 +270,11 @@ class Showcase(CanwestBaseChannel):
                 if (item['hasChildren'] == 'True') and (item['depth'] > self.root_depth):
                     self.add_releases()
                 self.plugin.add_list_item(cat)
-            #self.plugin.end_list()
+            self.plugin.end_list()
         else:
             # only add releases if no categories
             self.add_releases()
-
-        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
+            self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
 
 
     def add_releases(self):
