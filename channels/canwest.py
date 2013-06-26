@@ -257,7 +257,31 @@ class Showcase(CanwestBaseChannel):
         logging.debug('get_categories_json: %s'%url)
         return url
 
+    def action_browse(self):
+        parent_id = self.args['entry_id']
 
+        categories = self.get_categories(parent_id)
+        #logging.debug("Got %s Categories: %s" % (len(categories), "\n".join(repr(c) for c in categories)))
+
+        item = self.args
+
+        if categories:
+            for cat in categories:
+                if (item['hasChildren'] == 'True') and (item['depth'] > self.root_depth):
+                    self.add_releases()
+                self.plugin.add_list_item(cat)
+            self.plugin.end_list()
+        else:
+            # only add releases if no categories
+            self.add_releases()
+            self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
+
+
+    def add_releases(self):
+        releases = self.get_releases(self.args)
+        logging.debug("Got %s Releases: %s" % (len(releases), "\n".join(repr(r) for r in releases)))
+        for rel in releases:
+            self.plugin.add_list_item(rel, is_folder=False)
 
 
 class SliceTV(CanwestBaseChannel):
