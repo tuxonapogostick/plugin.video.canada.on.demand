@@ -110,14 +110,9 @@ class YTV(CorusBaseChannel):
     publisher_id = 694915334001
     flash_experience_id="myExperience"
 
-class YTVTest(CorusBaseChannel):
-    short_name = 'ytvtest'
-    long_name = 'YTV Test'
-
     token= '1372009211_46a528e32299a06a17b91387b1c9cf48'
     swf_url = 'http://pdk.theplatform.com/pdk/swf/flvPlayer.swf'
 
-    base_url = "http://www.ytv.com/videos"
 
     # ytv player
     # http://player.theplatform.com/p/yT_qKC/Main-Player
