@@ -440,7 +440,7 @@ class Bravo(CTVBaseChannel):
             yield data
 
     def action_play_clip(self):
-        url_template = 'http://esi.ctv.ca/datafeed/flv/urlgenjsext.aspx?formatid=26&vid=%s'
+        url_template = 'http://esi.ctv.ca/datafeed/urlgenjs.aspx?vid=%s'
         url = url_template % self.args['clip_id']
         logging.debug('clip url: %r' % url)
 
@@ -457,13 +457,6 @@ class CTV(CTVBaseChannel):
     long_name = 'CTV'
     base_url = 'http://watch.ctv.ca/AJAX/'
     swf_url = 'http://watch.ctv.ca/Flash/player.swf?themeURL=http://watch.ctv.ca/themes/CTV/player/theme.aspx'
-
-
-class TSN(CTVBaseChannel):
-    short_name = 'tsn'
-    long_name = 'The Sports Network'
-    base_url = 'http://watch.tsn.ca/AJAX/'
-    swf_url = 'http://watch.tsn.ca/Flash/player.swf?themeURL=http://watch.ctv.ca/themes/TSN/player/theme.aspx'
 
 
 class Discovery(CTVBaseChannel):
