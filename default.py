@@ -10,6 +10,9 @@ import time
 from utils import urldecode
 from channels import *
 from channel import *
+import socket
+socket.setdefaulttimeout(50)
+
 try:
     from sqlite3 import dbapi2 as sqlite
 except:
@@ -18,8 +21,8 @@ except:
 __plugin__ = "Canada On Demand"
 __author__ = 'Andre,Renaud  {andrepleblanc,renaudtrudel}@gmail.com'
 __url__ = 'http://xbmcaddons.com/addons/plugin.video.canada.on.demand/'
-__date__ = '04-07-2013'
-__version__ = '0.8.3'
+__date__ = '19-07-2013'
+__version__ = '0.8.4'
 __settings__ = xbmcaddon.Addon(id='plugin.video.canada.on.demand')
 
 
@@ -457,11 +460,11 @@ class OnDemandPlugin(object):
 
     def check_cache(self):
         cachedir = self.get_cache_dir()
-        version_file = os.path.join(cachedir, 'version.0.7.0')
+        version_file = os.path.join(cachedir, __version__)
         if not os.path.exists(version_file):
             shutil.rmtree(cachedir)
             os.mkdir(cachedir)
-            f = open(os.path.join(cachedir,"version.0.7.0"), 'w')
+            f = open(os.path.join(cachedir, __version__), 'w')
             f.write("\n")
             f.close()
 
