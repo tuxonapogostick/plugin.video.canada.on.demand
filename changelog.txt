@@ -1,3 +1,7 @@
+0.8.6 - Fixed CBC
+
+0.8.5 - Fixed CBC
+
 0.8.4 - Increase timeout on page fetch
 
 0.8.3 - Added Nick Canada

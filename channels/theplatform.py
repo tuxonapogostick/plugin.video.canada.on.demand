@@ -238,6 +238,16 @@ class ThePlatformBaseChannel(BaseChannel):
                 base_url = decode_htmlentities(soup.meta['base'])
                 playpath = ref['src']
                 logging.debug('CBC type of SMIL  base_url=%s  playpath=%s'%(base_url, playpath))
+            elif soup.meta['base'].startswith('{manifest:none}rtmp://'): # New CBC type of SMIL
+                base_url = decode_htmlentities(soup.meta['base'][15:])
+                playpath = ref['src']
+                playpath = playpath[0:playpath.find("{manifest")]
+                logging.debug('CBC type of SMIL  base_url=%s  playpath=%s'%(base_url, playpath))
+            elif soup.meta['base'].startswith('{switch:none}{manifest:none}rtmp://'): # New CBC type of SMIL
+                base_url = decode_htmlentities(soup.meta['base'][28:])
+                playpath = ref['src']
+                playpath = playpath[0:playpath.find("{manifest")]
+                logging.debug('CBC type of SMIL  base_url=%s  playpath=%s'%(base_url, playpath))
             else:
                 continue
 
