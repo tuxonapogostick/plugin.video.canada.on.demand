@@ -16,6 +16,7 @@ from channel import *
 import socket
 socket.setdefaulttimeout(50)
 from ConfigParser import SafeConfigParser
+import json
 
 #try:
 #    from sqlite3 import dbapi2 as sqlite
@@ -523,6 +524,32 @@ class OnDemandPlugin(object):
         self.check_cache()
         logger.debug("Constructed Plugin %s" % (self.__dict__,))
 
+def recursiveGet(parent, url):
+    url = url.replace(sys.argv[0], "")
+    plugin = OnDemandPlugin(sys.argv[0], sys.argv[1], url)
+    try:
+        results = plugin()
+    except Exception as e:
+        results = []
+    for result in results:
+        print result['label']
+        if not 'IsPlayable' in result:
+            recursiveGet(result, result['url'])
+
+    if parent:
+        if not 'children' in parent:
+            parent['children'] = []
+        parent['children'].append(results)
+    else:
+        return results
+
 if __name__ == '__main__':
     plugin = OnDemandPlugin(*sys.argv)
-    print plugin()
+    results = plugin()
+    for result in results:
+        label = result['label']
+        print label
+        chanresults = recursiveGet(None, result['url'])
+        with open('out/all-' + label + '.json', "w") as f:
+            f.write(json.dumps(chanresults, sort_keys=True,
+                               indent=4, separators=(',', ': ')))
