@@ -172,7 +172,7 @@ class ThePlatformBaseChannel(BaseChannel):
 
     def action_root(self):
         logger.debug('ThePlatformBaseChannel::action_root')
-        parent_id = self.args['entry_id'] # this should be None from @classmethod
+        parent_id = self.args.get('entry_id', None) # this should be None from @classmethod
         items = []
         if parent_id == 'None':
             parent_id = None
@@ -310,6 +310,7 @@ class ThePlatformBaseChannel(BaseChannel):
 class CBCChannel(ThePlatformBaseChannel):
     PID = "_DyE_l_gC9yXF9BvDQ4XNfcCVLS4PQij"
     base_url = 'http://cbc.feeds.theplatform.com/ps/JSON/PortalService/2.2/'
+    swf_url = 'https://livepassdl.conviva.com/hf/ver/2.82.0.19087/LivePassModuleMain_osmf.swf'
     custom_fields = ['Account','AudioVideo','BylineCredit','CBCPersonalities','Characters','ClipType',
         'EpisodeNumber','Event','Genre','LiveOnDemand','Organizations','People','Producers','Region',
         'Segment','Show','SeasonNumber','Sport','SubEvent']
@@ -377,15 +378,17 @@ class CBCChannel(ThePlatformBaseChannel):
         self.category_json = '&query=FullTitles|Shows,Sports,News,Radio'
         categories = self.get_categories(None)
 
+        items = []
         for cat in categories:
             cat.update({'Title': 'CBC %s'%cat['Title']})
-            self.plugin.add_list_item(cat)
-        self.plugin.end_list()
+            items.append(self.plugin.add_list_item(cat))
+#        self.plugin.end_list()
 
         #restore ParentIDs query for sub-categories
         self.category_json = '&query=ParentIDs|'
         self.in_root = False
         logger.debug('setting categ_json=%s'%self.category_json)
+        return items
 
 
 #class TouTV(ThePlatformBaseChannel):

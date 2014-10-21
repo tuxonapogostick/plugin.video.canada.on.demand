@@ -274,10 +274,11 @@ class OnDemandPlugin(object):
 
         # Add Context Menu Items
         if context_menu_items:
-            li['contextMenuItems'] = contextMenuItems
+            li['contextMenuItems'] = context_menu_items
 #            li.addContextMenuItems(context_menu_items,
 #                                   replaceItems=clear_context_menu)
 
+        li['url'] = self.get_url(info)
 #
 #        # Handle the return-early case
 #        if not return_only:

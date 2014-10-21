@@ -94,8 +94,7 @@ class BaseChannel(object):
             'channel': self.short_name,
             'use_rtmp': 0,
         }
-    
-        
+
         return info
     
     def action_browse(self):

@@ -94,10 +94,10 @@ class URLParser(object):
         params = [('playpath', self.data['playpath']),]
         
         if self.swf_url:
-            params.append(('swfurl', self.swf_url))
+            params.append(('swfUrl', self.swf_url))
         
         if self.swf_verify:
-            params.append(('swfvfy','true'))
+            params.append(('swfVfy','true'))
 
         if self.is_live:
             params.append(('live','true'))
