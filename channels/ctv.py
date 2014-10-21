@@ -1,3 +1,5 @@
+#! /usr/bin/python
+# vim:ts=4:sw=4:ai:et:si:sts=4:fileencoding=utf-8
 from theplatform import *
 from BeautifulSoup import BeautifulStoneSoup
 
@@ -7,11 +9,15 @@ try:
 except ImportError:
     has_pyamf = False
 
-try:
-    from sqlite3 import dbapi2 as sqlite
+import logging
 
-except:
-    from pysqlite2 import dbapi2 as sqlite
+logger = logging.getLogger(__name__)
+
+#try:
+#    from sqlite3 import dbapi2 as sqlite
+#
+#except:
+#    from pysqlite2 import dbapi2 as sqlite
 
 class CTVBaseChannel(BaseChannel):
     status = STATUS_GOOD
@@ -23,14 +29,16 @@ class CTVBaseChannel(BaseChannel):
         url = self.base_url + self.root_url
         soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
         ul = soup.find('div', {'id': 'Level1'}).find('ul')
+        items = []
         for li in ul.findAll('li'):
             data = {}
             data.update(self.args)
             data['Title'] = decode_htmlentities(li.a['title'])
             data['action'] = 'browse_show'
             data['show_id'] = li.a['id']
-            self.plugin.add_list_item(data)
-        self.plugin.end_list()
+            items.append(self.plugin.add_list_item(data))
+        return items
+#        self.plugin.end_list()
 
     def action_browse(self):
         """
@@ -64,6 +72,7 @@ class CTVBaseChannel(BaseChannel):
         page = self.plugin.fetch(url, max_age=self.cache_timeout).read()
         soup = BeautifulStoneSoup(page)
 
+        items = []
         for li in soup.find('ul').findAll('li'):
             a = li.find('a', {'id': re.compile('^Episode_\d+$')})
 
@@ -99,8 +108,9 @@ class CTVBaseChannel(BaseChannel):
                 except:
                     pass
 
-            self.plugin.add_list_item(data, is_folder=(data['action']!='play_episode'))
-        self.plugin.end_list()
+            items.append(self.plugin.add_list_item(data, is_folder=(data['action']!='play_episode')))
+        return items
+#        self.plugin.end_list()
 
     def action_play_episode(self):
         import xbmc
@@ -108,25 +118,29 @@ class CTVBaseChannel(BaseChannel):
         if vidcount:
             vidcount = int(vidcount)
 
+        items = []
+
         if vidcount  and vidcount == 1:
             data = list(self.iter_clip_list())[0]
             logging.debug(data)
             url = self.clipid_to_stream_url(data['clip_id'])
             return self.plugin.set_stream_url(url, data)
         else:
-            playlist = xbmc.PlayList(1)
-            playlist.clear()
+#            playlist = xbmc.PlayList(1)
+#            playlist.clear()
             for clipdata in self.iter_clip_list():
                 url = self.plugin.get_url(clipdata)
                 li = self.plugin.add_list_item(clipdata, is_folder=False, return_only=True)
-                ok = playlist.add(url, li)
-                logging.debug("CLIPDATA: %s, %s, %s, %s" % (clipdata, url, li, ok))
+                items.append(li)
+#                ok = playlist.add(url, li)
+#                logging.debug("CLIPDATA: %s, %s, %s, %s" % (clipdata, url, li, ok))
 
             time.sleep(1)
             logging.debug("CLIPDATA: %s" % (playlist,))
-            xbmc.Player().play(playlist)
-            xbmc.executebuiltin('XBMC.ActivateWindow(fullscreenvideo)')
-            self.plugin.end_list()
+#            xbmc.Player().play(playlist)
+#            xbmc.executebuiltin('XBMC.ActivateWindow(fullscreenvideo)')
+#            self.plugin.end_list()
+            return items
 
     def iter_clip_list(self):
         start_offset = 1
@@ -161,9 +175,11 @@ class CTVBaseChannel(BaseChannel):
 
     def action_browse_episode(self):
         logging.debug("ID: %s" % (self.args['episode_id'],))
+        items = []
         for data in self.iter_clip_list():
-            self.plugin.add_list_item(data, is_folder=False)
-        self.plugin.end_list()
+            items.append(self.plugin.add_list_item(data, is_folder=False))
+        return items
+#        self.plugin.end_list()
 
 
     def action_browse_show(self):
@@ -172,6 +188,7 @@ class CTVBaseChannel(BaseChannel):
         div = soup.find('div',{'id': re.compile('^Level\d$')})
         levelclass = [c for c in re.split(r"\s+", div['class']) if c.startswith("Level")][0]
         levelclass = int(levelclass[5:])
+        items = []
         if levelclass == 4:
             # Sites like TSN Always return level4 after the top level
             for li in soup.findAll('li'):
@@ -181,9 +198,7 @@ class CTVBaseChannel(BaseChannel):
                 data.update(parse_bad_json(a['onclick'][45:-16]))
                 data['action'] = 'play_clip'
                 data['clip_id'] = data['ClipId']
-                self.plugin.add_list_item(data, is_folder=False)
-            self.plugin.end_list()
-
+                items.append(self.plugin.add_list_item(data, is_folder=False))
         else:
             for li in soup.find('ul').findAll('li'):
                 a = li.find('a')
@@ -199,8 +214,8 @@ class CTVBaseChannel(BaseChannel):
                         data['action'] = 'play_episode'
                     data['episode_id'] = a['id'][8:]
                 data['Title'] = decode_htmlentities(a['title'])
-                self.plugin.add_list_item(data)
-            self.plugin.end_list()
+                items.append(self.plugin.add_list_item(data))
+        return items
 
     def clipid_to_stream_url(self, clipid):
         rurl = "http://cls.ctvdigital.net/cliplookup.aspx?id=%s" % (clipid)
@@ -211,7 +226,7 @@ class CTVBaseChannel(BaseChannel):
     def action_play_clip(self):
         url = self.clipid_to_stream_url(self.args['clip_id'])
         logging.debug("Playing Stream: %s" % (url,))
-        self.plugin.set_stream_url(url)
+        return self.plugin.set_stream_url(url)
 
 
 class CTVNews(CTVBaseChannel):
@@ -225,6 +240,7 @@ class CTVNews(CTVBaseChannel):
             self.args['remote_url'] = self.base_url
         soup = BeautifulSoup(self.plugin.fetch(self.args['remote_url'], max_age=self.cache_timeout))
 
+        items = []
         for category in soup.findAll('dt', 'videoPlaylistCategories'):
             data = {}
             data.update(self.args)
@@ -235,12 +251,14 @@ class CTVNews(CTVBaseChannel):
                 'category_id': category['id'],
                 'page_num' : 1
             })
-            self.plugin.add_list_item(data)
-        self.plugin.end_list()
+            items.append(self.plugin.add_list_item(data))
+        return items
+#        self.plugin.end_list()
 
     def action_browse_category(self):
         soup = BeautifulSoup(self.plugin.fetch("%s/%s?ot=example.AjaxPageLayout.ot&maxItemsPerPage=12&pageNum=%s"%(self.args['remote_url'],self.args["category_id"],self.args['page_num']),
                         max_age=self.cache_timeout))
+        items = []
         for clip in soup.findAll('article'):
             thumb = None
             if clip.img.has_key('src'):
@@ -270,7 +288,7 @@ class CTVNews(CTVBaseChannel):
                         'Thumb': thumb,
                         'playlist_id': playlist_id,
                     })
-                    self.plugin.add_list_item(data)
+                    items.append(self.plugin.add_list_item(data))
             else:
                 for script in scripts:
                     txt = script.string.strip()
@@ -292,7 +310,7 @@ class CTVNews(CTVBaseChannel):
                             'plot': plot,
                             'genre': 'News'
                         })
-                        self.plugin.add_list_item(data, is_folder=False)
+                        items.append(self.plugin.add_list_item(data, is_folder=False))
 
         nextPager = soup.find("span", {"class":"videoPaginationNext"})
         if nextPager and nextPager.find('a'):
@@ -302,13 +320,15 @@ class CTVNews(CTVBaseChannel):
                 'Title': ">>> Next Page",
                 'page_num' : int(self.args["page_num"])+1
             })
-        self.plugin.add_list_item(data)
+        items.append(self.plugin.add_list_item(data))
 
-        self.plugin.end_list()
+        return items
+#        self.plugin.end_list()
 
     def action_browse_playlist(self):
         soup = BeautifulSoup(self.plugin.fetch("%s/%s?ot=example.AjaxPageLayout.ot&maxItemsPerPage=12&pageNum=%s"%(self.args['remote_url'],self.args["playlist_id"],self.args['page_num']),
                         max_age=self.cache_timeout))
+        items = []
         for clip in soup.findAll('article', {'class':'videoClipThumb'}):
             thumb = clip.img['src']
             tagline = clip.h3.a.string
@@ -327,8 +347,9 @@ class CTVNews(CTVBaseChannel):
                 'plot': plot,
                 'genre': 'News'
             })
-            self.plugin.add_list_item(data, is_folder=False)
-        self.plugin.end_list()
+            items.append(self.plugin.add_list_item(data, is_folder=False))
+        return items
+#        self.plugin.end_list()
 
 class CTVLocalNews(CTVNews):
     short_name = 'ctvlocal'
@@ -356,8 +377,9 @@ class CTVLocalNews(CTVNews):
 
 
     def action_root(self):
+        items = []
         for channel, domain in self.local_channels:
-            self.plugin.add_list_item({
+            items.append(self.plugin.add_list_item({
                 'Title': channel,
                 'action': 'browse',
                 'channel': self.short_name,
@@ -366,8 +388,9 @@ class CTVLocalNews(CTVNews):
                 'remote_url': domain,
 
                 'Thumb': self.args['Thumb'],
-            })
-        self.plugin.end_list()
+            }))
+        return items
+#        self.plugin.end_list()
 
 
 class Bravo(CTVBaseChannel):
@@ -381,6 +404,7 @@ class Bravo(CTVBaseChannel):
                         , convertEntities=BeautifulStoneSoup.HTML_ENTITIES)
         shows = soup.findAll('show')
 
+        items = []
         for show in shows:
             show_img = self.base_url + show.logo.string + 'Shows?height=103&width=183&crop=True'
             show_url = self.base_url + show.url.string
@@ -390,32 +414,35 @@ class Bravo(CTVBaseChannel):
             if not soup2.find('a', 'video_carousel_thumbnail_container'): continue
 
             # there are videos, so add to the list
-            self.plugin.add_list_item({
+            items.append(self.plugin.add_list_item({
                 'Title': show.regex.string,
                 'Thumb': show_img,
                 'action': 'browse',
                 'channel': self.short_name,
                 'show_url': show_url
-            })
-        self.plugin.end_list('tvshows', [xbmcplugin.SORT_METHOD_LABEL])
+            }))
+        return items
+#        self.plugin.end_list('tvshows', [xbmcplugin.SORT_METHOD_LABEL])
 
     def action_browse(self):
         soup = BeautifulSoup(self.plugin.fetch(self.args['show_url'], max_age=self.cache_timeout))
         episodes = soup.findAll('a', 'video_carousel_thumbnail_container')
 
+        items = []
         for ep in episodes:
             ep_img = ep.img['src']
             ep_title = ep.span.string
             ep_id = ep['href'].split('=')[1].strip()
 
-            self.plugin.add_list_item({
+            items.append(self.plugin.add_list_item({
                 'Title': ep_title,
                 'Thumb': ep_img,
                 'action': 'browse_episode',
                 'channel': self.short_name,
                 'episode_id': ep_id
-            })
-        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
+            }))
+        return items
+#        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
 
     def iter_clip_list(self):
         url_template = 'http://app01.ctvdigital.com/ctvesi/datafeed/content_much.aspx?cid=%s'
@@ -449,7 +476,7 @@ class Bravo(CTVBaseChannel):
         video_url = temp.split('?')[0]
 
         logging.debug("Playing Stream: %s" % (video_url,))
-        self.plugin.set_stream_url(video_url)
+        return self.plugin.set_stream_url(video_url)
 
 
 class CTV(CTVBaseChannel):

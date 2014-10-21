@@ -1,3 +1,5 @@
+#! /usr/bin/python
+# vim:ts=4:sw=4:ai:et:si:sts=4:fileencoding=utf-8
 from theplatform import *
 from BeautifulSoup import BeautifulStoneSoup
 try:
@@ -5,6 +7,9 @@ try:
     has_pyamf = True
 except ImportError:
     has_pyamf = False
+import logging
+
+logger = logging.getLogger(__name__)
 
 class CanwestBaseChannel(ThePlatformBaseChannel):
     is_abstract = True
@@ -63,7 +68,7 @@ class CanwestBaseChannel(ThePlatformBaseChannel):
     #this could be temp-only, actually. paypath doesn't seem to care about extra parameters
     def action_play(self):
         parse = URLParser(swf_url=self.swf_url, playpath_qs=False)
-        self.plugin.set_stream_url(parse(self.args['clip_url']))
+        return self.plugin.set_stream_url(parse(self.args['clip_url']))
 
 
 
@@ -108,15 +113,17 @@ class GlobalNews(CanwestBaseChannel):
         return "%s-%s" % (self.short_name, self.args.get('local_channel',''))
 
     def action_root(self):
+        items = []
         for channel, ptag in self.local_channels:
-            self.plugin.add_list_item({
+            items.append(self.plugin.add_list_item({
                 'Title': channel,
                 'action': 'browse',
                 'channel': self.short_name,
                 'entry_id': None,
                 'local_channel': channel
-            })
-        self.plugin.end_list()
+            }))
+        return items
+#        self.plugin.end_list()
 
     def action_browse(self):
         caturl = dict(self.local_channels)[self.args['local_channel']]
@@ -127,6 +134,7 @@ class GlobalNews(CanwestBaseChannel):
         #logging.debug(self.args['local_channel'])
         #logging.debug('______________________________')
 
+        items = []
         soup = BeautifulSoup(self.plugin.fetch(caturl, max_age=self.cache_timeout))
         navlist = soup.findAll('div', 'video-navigation-column')
 
@@ -149,8 +157,9 @@ class GlobalNews(CanwestBaseChannel):
                     'entry_id': None,
                     'remote_url': url
                 })
-                self.plugin.add_list_item(data)
-        self.plugin.end_list()
+                items.append(self.plugin.add_list_item(data))
+        return items
+#        self.plugin.end_list()
 
     def action_browse_category(self):
         logging.debug('______________________________')
@@ -161,6 +170,7 @@ class GlobalNews(CanwestBaseChannel):
         # json.loads was complaining
         platform_url = 'http://feed.theplatform.com/f/dtjsEC/FCT_FJTDVpVT?form=rss&byId=%s'
 
+        items = []
         soup = BeautifulSoup(self.plugin.fetch(self.args['remote_url'], max_age=self.cache_timeout))
         eplist = soup.find('ul', 'video-browse-container').findAll('li')
 
@@ -191,8 +201,9 @@ class GlobalNews(CanwestBaseChannel):
             	'tagline': tagline,
             	'remote_url': platform_url % ep.findAll('span')[1]['data-v_count_id']
             })
-            self.plugin.add_list_item(data, is_folder=False)
-        self.plugin.end_list()
+            items.append(self.plugin.add_list_item(data, is_folder=False))
+        return items
+#        self.plugin.end_list()
 
     def action_play_episode(self):
         logging.debug('______________________________')
@@ -264,24 +275,28 @@ class Showcase(CanwestBaseChannel):
         #logging.debug("Got %s Categories: %s" % (len(categories), "\n".join(repr(c) for c in categories)))
 
         item = self.args
+        items = []
 
         if categories:
             for cat in categories:
                 if (item['hasChildren'] == 'True') and (item['depth'] > self.root_depth):
                     self.add_releases()
-                self.plugin.add_list_item(cat)
-            self.plugin.end_list()
+                items.append(self.plugin.add_list_item(cat))
+#            self.plugin.end_list()
         else:
             # only add releases if no categories
-            self.add_releases()
-            self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
+            items.append(self.add_releases())
+#            self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
+        return items
 
 
     def add_releases(self):
         releases = self.get_releases(self.args)
+        items = []
         logging.debug("Got %s Releases: %s" % (len(releases), "\n".join(repr(r) for r in releases)))
         for rel in releases:
-            self.plugin.add_list_item(rel, is_folder=False)
+            items.append(self.plugin.add_list_item(rel, is_folder=False))
+        return items
 
 
 class SliceTV(CanwestBaseChannel):

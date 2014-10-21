@@ -100,8 +100,10 @@ class BaseChannel(object):
     
     def action_browse(self):
         rurl = self.get_url(self.args['remote_url'])
-        self.plugin.add_list_item({'Title': 'Hi!'})
-        self.plugin.end_list()
+	items = []
+        items.append(self.plugin.add_list_item({'Title': 'Hi!'}))
+	return items
+#        self.plugin.end_list()
 
     
     def get_url(self, url=None):

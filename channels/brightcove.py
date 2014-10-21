@@ -1,20 +1,22 @@
+#! /usr/bin/python
+# vim:ts=4:sw=4:ai:et:si:sts=4:fileencoding=utf-8
 import time
 import cgi
 import datetime
-import simplejson
 from channel import BaseChannel, ChannelException,ChannelMetaClass, STATUS_BAD, STATUS_GOOD, STATUS_UGLY
 from utils import *
 import httplib
-import xbmcplugin
-import xbmc
+#import xbmcplugin
+#import xbmc
 
 try:
     from pyamf import remoting
     has_pyamf = True
 except ImportError:
     has_pyamf = False
-    
+import logging
 
+logger = logging.getLogger(__name__)
     
 class BrightcoveBaseChannel(BaseChannel):
     
@@ -127,8 +129,10 @@ class TVOKids(BrightcoveBaseChannel):
         self.plugin.add_list_item(data)
         data['Title'] = "Ages 11 and under"
         data['age'] = 11
-        self.plugin.add_list_item(data)
-        self.plugin.end_list()
+        items = []
+        items.append(self.plugin.add_list_item(data))
+        return items
+#        self.plugin.end_list()
             
     def action_play_video(self):
         info = self.get_clip_info(self.player_id, self.args['bc_id'],
@@ -151,10 +155,11 @@ class TVOKids(BrightcoveBaseChannel):
         #pageurl = 'http://www.tvokids.com/shows/worldofwonders'
         url = "%s tcUrl=%s app=%s playpath=%s%s swfUrl=%s conn=B:0 conn=S:%s&%s" % (tcurl,tcurl, app, playpath, qs, self.swf_url, playpath, wierdqs)
         logging.debug(url)
-        self.plugin.set_stream_url(url)
+        return self.plugin.set_stream_url(url)
         
         
     def action_browse_show(self):
+        items = []
         url = self.base_url + "/feeds/%s/all/videos_list.xml?random=%s" % (self.args['node_id'], int(time.time()), )
         page = self.plugin.fetch(url, max_age=self.cache_timeout).read()
         soup = BeautifulStoneSoup(page)
@@ -168,8 +173,9 @@ class TVOKids(BrightcoveBaseChannel):
             data['Plot'] = decode_htmlentities(node.find("node_short_description").contents[0].strip())
             data['bc_id'] = node.find("node_bc_id").contents[0].strip()
             data['bc_refid'] = node.find("node_bc_refid").contents[0].strip()
-            self.plugin.add_list_item(data, is_folder=False)
-        self.plugin.end_list('episodes')
+            items.append(self.plugin.add_list_item(data, is_folder=False))
+        return items
+#        self.plugin.end_list('episodes')
         
     def action_list_shows(self):
         age = int(self.args.get('age'))
@@ -177,6 +183,7 @@ class TVOKids(BrightcoveBaseChannel):
             url = '/feeds/all/98/shows'
         elif age == 5:
             url = '/feeds/all/97/shows'
+        items = []
         page = self.plugin.fetch(self.base_url + url, max_age=self.cache_timeout).read()
         soup = BeautifulStoneSoup(page)
         for node in soup.findAll('node'):
@@ -188,6 +195,6 @@ class TVOKids(BrightcoveBaseChannel):
                 data['Thumb'] = self.base_url + "/" + thumb
             data['node_id'] = node.find('node_id').contents[0].strip()
             data['action'] = 'browse_show'
-            self.plugin.add_list_item(data)
-        self.plugin.end_list()
-        
+            items.append(self.plugin.add_list_item(data))
+        return items
+#        self.plugin.end_list()

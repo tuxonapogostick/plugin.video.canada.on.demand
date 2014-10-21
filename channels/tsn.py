@@ -1,3 +1,5 @@
+#! /usr/bin/python
+# vim:ts=4:sw=4:ai:et:si:sts=4:fileencoding=utf-8
 import xml.etree.ElementTree as ET, urlparse
 from theplatform import *
 from BeautifulSoup import BeautifulStoneSoup
@@ -8,11 +10,15 @@ try:
 except ImportError:
     has_pyamf = False
 
-try:
-    from sqlite3 import dbapi2 as sqlite
+import logging
 
-except:
-    from pysqlite2 import dbapi2 as sqlite
+logger = logging.getLogger(__name__)
+
+#try:
+#    from sqlite3 import dbapi2 as sqlite
+#
+#except:
+#    from pysqlite2 import dbapi2 as sqlite
 
 
 class TSN(BaseChannel):
@@ -68,7 +74,6 @@ class TSN(BaseChannel):
                 playpath = playpath.replace('Adaptive_02','Adaptive_0' + str(vidquality))
                 playpath = playpath.replace('Adaptive_01','Adaptive_0' + str(vidquality))
                 url = firstpart + secondpart[0] + playpath
-        return self.plugin.set_stream_url(url)
 
 
     def action_play_ondemand(self):
@@ -84,6 +89,8 @@ class TSN(BaseChannel):
 
         tree = ET.parse(data)
         root = tree.getroot()
+
+        items = []
 
         for menuitem in root.findall('channel/item'):
             allclipids = menuitem.find('id').text
@@ -108,9 +115,10 @@ class TSN(BaseChannel):
                     })
                     logging.debug(data)
 
-                    self.plugin.add_list_item(data, is_folder=False)
+                    items.append(self.plugin.add_list_item(data, is_folder=False))
                 break
-        self.plugin.end_list()
+        return items
+#        self.plugin.end_list()
 
 
     def action_browse_channel(self):
@@ -124,6 +132,8 @@ class TSN(BaseChannel):
 
         tree = ET.parse(data)
         root = tree.getroot()
+
+        items = []
 
         for menuitem in root.findall('channel/item'):
             title = menuitem.find('title').text
@@ -147,11 +157,12 @@ class TSN(BaseChannel):
                 'Thumb': image,
                 'Plot': description
             })
-            self.plugin.add_list_item(data, is_folder=(vidtype == 'video'))
-        self.plugin.end_list()
+            items.append(self.plugin.add_list_item(data, is_folder=(vidtype == 'video')))
+        return items
+#        self.plugin.end_list()
 
     # recursive category builder (NHL, NFL, etc)
-    def get_categories(self, item, title):
+    def get_categories(self, item, title, items):
         children = item.findall('item')
 
         for child in children:
@@ -159,7 +170,7 @@ class TSN(BaseChannel):
             separator = '-' if len(title) > 0 else ''
             name = title + separator + t
 
-            if (self.get_categories(child, name)):
+            if (self.get_categories(child, name, items)):
                 url = child.find('urlLatest').text
 
                 data = {}
@@ -170,7 +181,7 @@ class TSN(BaseChannel):
                     'remote_url': url,
                     'channel': self.short_name,
                 })
-                self.plugin.add_list_item(data)
+                items.append(self.plugin.add_list_item(data))
 
         return len(children) == 0 # has children?
 
@@ -182,5 +193,7 @@ class TSN(BaseChannel):
         root = tree.getroot()
 
         # build categories list
-        self.get_categories(root, '')
-        self.plugin.end_list()
+        items = []
+        self.get_categories(root, '', items)
+        return items
+#        self.plugin.end_list()

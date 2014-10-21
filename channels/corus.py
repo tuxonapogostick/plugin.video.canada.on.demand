@@ -1,9 +1,13 @@
+#! /usr/bin/python
+# vim:ts=4:sw=4:ai:et:si:sts=4:fileencoding=utf-8
 from brightcove import BrightcoveBaseChannel
 from utils import *
 from BeautifulSoup import BeautifulStoneSoup
 import json
 import logging
-import xbmcplugin
+#import xbmcplugin
+
+logger = logging.getLogger(__name__)
 
 class CorusBaseChannel(BrightcoveBaseChannel):
 
@@ -23,6 +27,7 @@ class CorusBaseChannel(BrightcoveBaseChannel):
             pass
 
         level0 = soup.find("ul", {"class": "level_0"})
+        items = []
 
         # Find all the categories but filter out the 'Full Episodes' group
         links = level0.findAll('a', {"class": "category-link", 'href':
@@ -34,9 +39,10 @@ class CorusBaseChannel(BrightcoveBaseChannel):
             data['action'] = 'list_episodes'
             data['query'] = link['href']
             data['player_id'] = player_id
-            self.plugin.add_list_item(data)
+            items.append(self.plugin.add_list_item(data))
 
-        self.plugin.end_list()
+        return items
+#        self.plugin.end_list()
 
     def action_list_episodes(self):
         query = self.args.get('query')
@@ -46,6 +52,7 @@ class CorusBaseChannel(BrightcoveBaseChannel):
         logging.debug(data)
         jdata = json.loads(data)
 
+        items = []
         for episode in jdata:
             data = {}
             data.update(self.args)
@@ -56,8 +63,9 @@ class CorusBaseChannel(BrightcoveBaseChannel):
 
             data['action'] = 'play_video'
             data['showid'] = episode['Id']
-            self.plugin.add_list_item(data, is_folder=False)
-        self.plugin.end_list('episodes')
+            items.append(self.plugin.add_list_item(data, is_folder=False))
+        return items
+#        self.plugin.end_list('episodes')
 
     def action_play_video(self):
         showid = self.args.get('showid')
@@ -84,7 +92,7 @@ class CorusBaseChannel(BrightcoveBaseChannel):
         logging.debug("TCURL:%s" % (tcurl,))
         url = "%s app=%s playpath=%s swfUrl=%s swfVfy=true pageUrl=%s" %(tcurl, app, playpath,
                 self.swf_url, "http://media.treehousetv.com")
-        self.plugin.set_stream_url(url)
+        return self.plugin.set_stream_url(url)
 
 class TreehouseTV(CorusBaseChannel):
     short_name = 'treehouse'
@@ -130,6 +138,7 @@ class YTV(CorusBaseChannel):
                         , convertEntities=BeautifulStoneSoup.HTML_ENTITIES)
         shows = soup.findAll('item')
 
+        items = []
         for show in shows:
             show_title = show.title.string
 
@@ -137,14 +146,15 @@ class YTV(CorusBaseChannel):
                 show_fullTitle = show.find('plcategory:fulltitle').string
 
                 # there are categories, so add to the list
-                self.plugin.add_list_item({
+                items.append(self.plugin.add_list_item({
                     'Title': show_title,
                     'action': 'list_episodes',
                     'channel': self.short_name,
                     'fulltitle': show_fullTitle
-                })
+                }))
             except: pass
-        self.plugin.end_list('tvshows', [xbmcplugin.SORT_METHOD_LABEL])
+        return items
+#        self.plugin.end_list('tvshows', [xbmcplugin.SORT_METHOD_LABEL])
 
     def action_list_episodes(self):
         url = self.feed_url + self.rel_start_params + self.show_params + ',' + self.args['fulltitle'] + self.rel_end_params
@@ -156,6 +166,7 @@ class YTV(CorusBaseChannel):
                         , convertEntities=BeautifulStoneSoup.HTML_ENTITIES)
         episodes = soup.findAll('item')
 
+        items = []
         for episode in episodes:
             ep_title = episode.title.string
             ep_plot = episode.description.string
@@ -179,8 +190,9 @@ class YTV(CorusBaseChannel):
             	'tagline': ep_title,
             	'remote_url': ep_url
             })
-            self.plugin.add_list_item(data, is_folder=False)
-        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
+            items.append(self.plugin.add_list_item(data, is_folder=False))
+        return items
+#        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
 
     def action_play_episode(self):
         url = self.args['remote_url']

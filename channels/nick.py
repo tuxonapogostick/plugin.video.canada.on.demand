@@ -1,3 +1,5 @@
+#! /usr/bin/python
+# vim:ts=4:sw=4:ai:et:si:sts=4:fileencoding=utf-8
 from theplatform import *
 import xml.etree.ElementTree as ET
 
@@ -7,11 +9,15 @@ try:
 except ImportError:
     has_pyamf = False
 
-try:
-    from sqlite3 import dbapi2 as sqlite
+import logging
 
-except:
-    from pysqlite2 import dbapi2 as sqlite
+logger = logging.getLogger(__name__)
+
+#try:
+#    from sqlite3 import dbapi2 as sqlite
+#
+#except:
+#    from pysqlite2 import dbapi2 as sqlite
 
 
 class Nick(BaseChannel):
@@ -44,6 +50,7 @@ class Nick(BaseChannel):
 
         tree = ET.parse(data)
         root = tree.getroot()
+        items = []
 
         for info in root.findall('VideoInfo'):
             title = info.find('VideoTitle').text.replace('-', ' ')
@@ -61,8 +68,9 @@ class Nick(BaseChannel):
                 'clip_id': clipid,
                 'Thumb': image
             })
-            self.plugin.add_list_item(data, is_folder=False)
-        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
+            items.add(self.plugin.add_list_item(data, is_folder=False))
+        return items
+#        self.plugin.end_list('episodes', [xbmcplugin.SORT_METHOD_DATE])
 
     def action_root(self):
         url = self.base_url + '/show'
@@ -71,6 +79,7 @@ class Nick(BaseChannel):
         allshows = soup.find('div', id='nick-shows-listings').findAll('a');
         shows = []
 
+        items = []
         for item in allshows:
             url = self.base_url + item['href']
             soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
@@ -89,5 +98,6 @@ class Nick(BaseChannel):
                     'channel': self.short_name,
                     'id': item['href'].split('/')[3]
                 })
-                self.plugin.add_list_item(data)
-        self.plugin.end_list('tvshows', [xbmcplugin.SORT_METHOD_LABEL])
+                items.append(self.plugin.add_list_item(data))
+        return items
+#        self.plugin.end_list('tvshows', [xbmcplugin.SORT_METHOD_LABEL])
