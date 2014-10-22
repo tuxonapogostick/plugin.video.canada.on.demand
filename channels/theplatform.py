@@ -142,6 +142,7 @@ class ThePlatformBaseChannel(BaseChannel):
                     'remote_url': item['URL'],
                     'remote_PID': item['PID'],
                     'channel': self.args['channel'],
+                    'station': self.long_name,
                     'action': action,
                     'bitrate': item['bitrate'],
                     'medialen' : item['length']
@@ -161,6 +162,7 @@ class ThePlatformBaseChannel(BaseChannel):
                         'remote_url': item['URL'],
                         'remote_PID': item['PID'],
                         'channel': self.args['channel'],
+                        'station': self.long_name,
                         'action': action,
                         'bitrate': item['bitrate'],
                         'medialen': item['length']

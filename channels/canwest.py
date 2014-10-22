@@ -195,6 +195,7 @@ class GlobalNews(CanwestBaseChannel):
             data.update ({
                 'action': 'play_episode',
                 'entry_id': None,
+                'station': self.long_name + " " + self.args['local_channel'],
             	'Title': tagline,
             	'Duration' : duration,
             	'Thumb' : thumb,

@@ -183,6 +183,7 @@ class YTV(CorusBaseChannel):
             data.update ({
                 'action': 'play_episode',
                 'entry_id': None,
+                'station': self.long_name,
             	'Title': ep_title,
             	'Duration' : ep_duration,
             	'Plot': ep_plot,

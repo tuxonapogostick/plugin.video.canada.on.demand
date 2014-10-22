@@ -49,6 +49,7 @@ class CPAC(BaseChannel):
             items.append(self.plugin.add_list_item({
                 'action': 'play_video',
                 'channel': 'cpac',
+                'station': self.long_name
                 'remote_url': links[0]['href'],
                 'Title': "%s (%s)" % (ep_title, date_str),
             }, is_folder=False))

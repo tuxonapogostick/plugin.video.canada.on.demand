@@ -92,6 +92,8 @@ class CTVBaseChannel(BaseChannel):
             else:
                 action = 'browse_episode'
             data['action'] = action
+            if action == 'play_episode':
+                data['station'] = self.long_name
 
             dl = li.find('dl', {'class':'Item'} )
             if dl:
@@ -212,6 +214,7 @@ class CTVBaseChannel(BaseChannel):
                     data['action'] = 'browse_episode'
                     if self.plugin.get_setting("make_playlists") == "true":
                         data['action'] = 'play_episode'
+                        data['station'] = self.long_name
                     data['episode_id'] = a['id'][8:]
                 data['Title'] = decode_htmlentities(a['title'])
                 items.append(self.plugin.add_list_item(data))
