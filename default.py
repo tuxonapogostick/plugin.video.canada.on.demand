@@ -560,6 +560,7 @@ def grabAllJson(results):
                 with open('out/all-' + cbclabel + '.json', "w") as f:
                     f.write(json.dumps(chanresults, sort_keys=True,
                                        indent=4, separators=(',', ': ')))
+
             continue
 
         if not 'url' in result:
@@ -578,5 +579,4 @@ if __name__ == '__main__':
         results = []
     print results
     with open(json_outfile, "w") as f:
-        f.write(json.dumps(results)
-
+        f.write(json.dumps(results))
