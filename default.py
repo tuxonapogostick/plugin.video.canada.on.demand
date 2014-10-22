@@ -172,7 +172,8 @@ class OnDemandPlugin(object):
         via add_list_item.
 
         """
-        listitem = { 'label' : 'clip', 'path' : url }
+        listitem = { 'label' : 'clip', 'path' : url,
+                     'proxyhost' : self.proxyhost }
         return listitem
 #        listitem = xbmcgui.ListItem(label='clip', path=url)
 #        xbmcplugin.setResolvedUrl(self.handle, True, listitem)
@@ -511,6 +512,7 @@ class OnDemandPlugin(object):
             proxy_handler = urllib2.ProxyHandler({'http':'%s:%s'%(proxy,port)})
             opener = urllib2.build_opener(proxy_handler)
             urllib2.install_opener(opener)
+            self.proxyhost = proxy
 
         self.script_url = script_url
         self.handle = 1 # int(handle)
