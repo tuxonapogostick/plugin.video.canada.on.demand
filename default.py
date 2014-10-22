@@ -504,6 +504,7 @@ class OnDemandPlugin(object):
                 f.write("\n")
 
     def __init__(self, script_url, handle, querystring):
+        self.json_outfile = handle
         proxy = self.get_setting("http_proxy")
         port = self.get_setting("http_proxy_port")
         if proxy and port:
@@ -512,7 +513,7 @@ class OnDemandPlugin(object):
             urllib2.install_opener(opener)
 
         self.script_url = script_url
-        self.handle = int(handle)
+        self.handle = 1 # int(handle)
         if len(querystring) > 2:
             self.querystring = querystring[1:]
             items = urldecode(self.querystring)
@@ -532,9 +533,10 @@ def recursiveGet(parent, url):
     except Exception as e:
         results = []
     for result in results:
-        print result['label']
-        if not 'IsPlayable' in result:
-            recursiveGet(result, result['url'])
+        if type(result) is dict:
+            print result['label']
+            if not 'IsPlayable' in result and 'url' in result:
+                recursiveGet(result, result['url'])
 
     if parent:
         if not 'children' in parent:
@@ -543,13 +545,38 @@ def recursiveGet(parent, url):
     else:
         return results
 
-if __name__ == '__main__':
-    plugin = OnDemandPlugin(*sys.argv)
-    results = plugin()
+def grabAllJson(results):
     for result in results:
         label = result['label']
         print label
+        if label.lower() == 'cbc':
+            url = result['url'].replace(sys.argv[0], "")
+            plugin = OnDemandPlugin(sys.argv[0], sys.argv[1], url)
+            cbcresults = plugin()
+            for cbcresult in cbcresults:
+                cbclabel = cbcresult['label']
+                print cbclabel
+                chanresults = recursiveGet(None, cbcresult['url'])
+                with open('out/all-' + cbclabel + '.json', "w") as f:
+                    f.write(json.dumps(chanresults, sort_keys=True,
+                                       indent=4, separators=(',', ': ')))
+            continue
+
+        if not 'url' in result:
+            continue
         chanresults = recursiveGet(None, result['url'])
         with open('out/all-' + label + '.json', "w") as f:
             f.write(json.dumps(chanresults, sort_keys=True,
                                indent=4, separators=(',', ': ')))
+
+if __name__ == '__main__':
+    json_outfile = sys.argv[1]
+    plugin = OnDemandPlugin(*sys.argv)
+    results = plugin()
+    # grabAllJson(results)
+    if not results:
+        results = []
+    print results
+    with open(json_outfile, "w") as f:
+        f.write(json.dumps(results)
+
