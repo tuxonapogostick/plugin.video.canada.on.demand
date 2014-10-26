@@ -1,8 +1,8 @@
 #! /usr/bin/python
 # vim:ts=4:sw=4:ai:et:si:sts=4:fileencoding=utf-8
+
 from theplatform import *
 from BeautifulSoup import BeautifulStoneSoup
-#from selenium import webdriver
 import yaml
 import json
 
@@ -38,13 +38,6 @@ class BellMediaBaseChannel(BaseChannel):
     stacks_json = detailsBase + '/contents/%d/contentpackages/%d/stacks'
     user_agent = 'Mozilla/5.0 (iPhone; U; CPU iPhone OS 4_3_2 like Mac OS X; en-us) AppleWebKit/533.17.9 (KHTML, like Gecko) Version/5.0.2 Mobile/8H7 Safari/653.18.5'
 
-    def __init__(self, plugin, **args):
-        BaseChannel.__init__(self, plugin, **args)
-        #self.browser = webdriver.PhantomJS(service_args=self.plugin.service_args)
-    def __del__(self):
-        #self.browser.close()
-        pass
-
     def action_root(self):
         url = self.settings_js % self.brandId
         with self.plugin.fetch(url, max_age=self.cache_timeout,
@@ -52,8 +45,7 @@ class BellMediaBaseChannel(BaseChannel):
             jsonp = f.read()
         jsonp = jsonp[jsonp.index("(") + 1 : jsonp.rindex(")")]
         jsonp = jsonp.replace("\t", "        ")
-        with open(self.short_name + ".settings", "w") as f:
-            f.write(jsonp)
+
         settings = None
         try:
             settings = json.loads(jsonp)
