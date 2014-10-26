@@ -74,9 +74,10 @@ class OnDemandPlugin(object):
 
     def _urlretrieve(self, url, filename, retry_limit=4, browser=None,
                      user_agent=None):
-        with self._urlopen(url, retry_limit, browser, user_agent) as inf:
-            with open(filename, "w") as f:
-                return f.write(inf.read())
+        inf = self._urlopen(url, retry_limit, browser, user_agent)
+        with open(filename, "w") as f:
+            return f.write(inf.read())
+        inf.close()
 
     def fetch(self, url, max_age=None, browser=None, user_agent=None):
         if max_age is None:
