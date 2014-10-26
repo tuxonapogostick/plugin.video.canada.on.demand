@@ -8,7 +8,7 @@ import cgi
 #import xbmc, xbmcaddon, xbmcgui, xbmcplugin
 import logging
 logging.basicConfig(level=logging.WARNING)
-import urllib,urllib2,urlparse
+import urllib, urllib2, urlparse
 import time
 from utils import urldecode
 from channels import *
@@ -17,6 +17,7 @@ import socket
 socket.setdefaulttimeout(50)
 from ConfigParser import SafeConfigParser
 import json
+import StringIO
 
 #try:
 #    from sqlite3 import dbapi2 as sqlite
@@ -47,60 +48,39 @@ except Exception, e:
 
 class OnDemandPlugin(object):
 
-#    def connect_to_db(self):
-#        path = xbmc.translatePath('special://profile/addon_data/plugin.video.canada.on.demand/')
-#        if not os.path.exists(path):
-#            os.makedirs(path)
-#        self.db_conn = sqlite.connect(os.path.join(path, 'bookmarks.db'))
-#        curs = self.db_conn.cursor()
-#        curs.execute("""create table if not exists bookmark_folders (
-#            id integer primary key,
-#            name text,
-#            parent_id integer,
-#            path text
-#        )""")
-#
-#        curs.execute("""create table if not exists bookmarks (
-#            id integer primary key,
-#            name text,
-#            folder_id integer,
-#            plugin_url text
-#        )""")
-#
-#        try:
-#            curs.execute("""insert into bookmark_folders (id, name, parent_id, path)
-#                        values (?,?,?,?)""", (1,'Bookmarks', 0, 'Bookmarks'))
-#        except:
-#            pass
-
-
-    def _urlopen(self, url, retry_limit=4):
+    def _urlopen(self, url, retry_limit=4, browser=None, user_agent=None):
         retries = 0
         while retries < retry_limit:
             logger.debug("fetching %s" % (url,))
-            # Add referer for CTV to work properly
-            url_scheme, netloc, path, query, fragment = urlparse.urlsplit(url)
-            req = urllib2.Request(url)
-            req.add_header("Referer", "%s://%s/" % (url_scheme, netloc))
-            try:
-                return urllib2.urlopen(req)
-            except (urllib2.HTTPError, urllib2.URLError), e:
-                retries += 1
+            if browser:
+                try:
+                    browser.get(url)
+                    return StringIO.StringIO(browser.page_source)
+                except Exception:
+                    retries += 1
+            else:
+                # Add referer for CTV to work properly
+                url_scheme, netloc, path, query, fragment = urlparse.urlsplit(url)
+                req = urllib2.Request(url)
+                req.add_header("Referer", "%s://%s/" % (url_scheme, netloc))
+                if user_agent:
+                    req.add_header("User-Agent", user_agent)
+
+                try:
+                    return urllib2.urlopen(req)
+                except (urllib2.HTTPError, urllib2.URLError), e:
+                    retries += 1
             raise Exception("Failed to retrieve page: %s" %(url,))
 
-    def _urlretrieve(self, url, filename, retry_limit=4):
-        retries = 0
-        while retries < retry_limit:
-            logger.debug("fetching %s" % (url,))
-            try:
-                return urllib.urlretrieve(url, filename)
-            except (urllib.HTTPError, urllib.URLError), e:
-                retries += 1
-            raise Exception("Failed to retrieve page: %s" %(url,))
+    def _urlretrieve(self, url, filename, retry_limit=4, browser=None,
+                     user_agent=None):
+        with self._urlopen(url, retry_limit, browser, user_agent) as inf:
+            with open(filename, "w") as f:
+                return f.write(inf.read())
 
-    def fetch(self, url, max_age=None):
+    def fetch(self, url, max_age=None, browser=None, user_agent=None):
         if max_age is None:
-            return self._urlopen(url)
+            return self._urlopen(url, browser=browser, user_agent=user_agent)
 
         tmpurl = url
         scheme, tmpurl = tmpurl.split("://",1)
@@ -121,7 +101,13 @@ class OnDemandPlugin(object):
 
         if download:
             logger.debug("Fetching: %s" % (url,))
-            urllib.urlretrieve(url, cfname)
+            if browser:
+                browser.get(url)
+                with open(cfname, "w") as f:
+                    f.write(browser.page_source.encode('utf-8'))
+            else:
+                self._urlretrieve(url, cfname, browser=browser,
+                                  user_agent=user_agent)
         else:
             logger.debug("Using Cached: %s" % (url,))
 
@@ -159,12 +145,8 @@ class OnDemandPlugin(object):
 
             items.append(self.add_list_item(info))
         return items
-#        self.end_list()
 
-#    def get_dialog(self):
-#        return xbmcgui.Dialog()
-
-    def set_stream_url(self, url, info=None):
+    def set_stream_url(self, url, info=None, type="rtmp"):
         """
         Resolve a Stream URL and return it to XBMC.
 
@@ -173,23 +155,10 @@ class OnDemandPlugin(object):
 
         """
         listitem = { 'label' : 'clip', 'path' : url,
-                     'proxyhost' : self.proxyhost }
+                     'proxyhost' : self.proxy,
+                     'httpproxyport' : self.proxy_port,
+                     'type' : type }
         return listitem
-#        listitem = xbmcgui.ListItem(label='clip', path=url)
-#        xbmcplugin.setResolvedUrl(self.handle, True, listitem)
-
-
-
-#    def end_list(self, content='movies', sort_methods=None):
-#        xbmcplugin.setContent(self.handle, content)
-#        if sort_methods is None:
-#            sort_methods = (xbmcplugin.SORT_METHOD_NONE,)
-#
-#        for sm in sort_methods:
-#            xbmcplugin.addSortMethod(self.handle, sm)
-#        xbmcplugin.endOfDirectory(self.handle, succeeded=True)
-
-
 
     def get_cache_dir(self):
         """
@@ -198,22 +167,20 @@ class OnDemandPlugin(object):
         """
         # I have no idea if this is right.
         path = CACHEDIR
-#        path = xbmc.translatePath('special://profile/addon_data/plugin.video.canada.on.demand/cache/')
         if not os.path.exists(path):
             os.makedirs(path)
         return path
 
 
-    def get_setting(self, id):
+    def get_setting(self, id, section="general"):
         """
         return a user-modifiable plugin setting.
 
         """
         try:
-            return config.get("general", id)
+            return config.get(section, id)
         except Exception:
             return None
-#        return __settings__.getSetting(id)
 
 
     def add_list_item(self, info, is_folder=True, return_only=False,
@@ -239,19 +206,6 @@ class OnDemandPlugin(object):
         if context_menu_items is None:
             context_menu_items = []
 
-#        if bookmark_parent is None:
-#            bookmark_url = self.get_url({'action': 'add_to_bookmarks', 'url': self.get_url(info)})
-#            context_menu_items.append(("Bookmark", "XBMC.RunPlugin(%s)" % (bookmark_url,)))
-#        else:
-#            bminfo = {'action': 'remove_from_bookmarks', 'url': self.get_url(info), 'folder_id': bookmark_parent}
-#            if bookmark_id is not None:
-#                bminfo['bookmark_id'] = bookmark_id
-#            elif bookmark_folder_id is not None:
-#                bminfo['bookmark_folder_id'] = bookmark_folder_id
-
-#            bookmark_url = self.get_url(bminfo)
-#            context_menu_items.append(("Remove From Bookmarks", "XBMC.RunPlugin(%s)" % (bookmark_url,)))
-
         info.setdefault('Thumb', '')
         info.setdefault('Icon', info['Thumb'])
         if 'Rating' in info:
@@ -259,38 +213,18 @@ class OnDemandPlugin(object):
 
         li = { 'label' : info['Title'], 'iconImage' : info['Icon'],
                'thumbnailImage' : info['Thumb'] }
-#        li=xbmcgui.ListItem(
-#            label=info['Title'],
-#            iconImage=info['Icon'],
-#            thumbnailImage=info['Thumb']
-#        )
-
 
         if not is_folder:
             li['IsPlayable'] = True
-            #li.setProperty("IsPlayable", "true")
             context_menu_items.append(("Queue Item", "Action(Queue)"))
 
         li['videoInfo'] = { k : unicode(v) for k, v in info.iteritems() }
-#        li.setInfo(type='Video', infoLabels=dict((k, unicode(v)) for k, v in info.iteritems()))
 
         # Add Context Menu Items
         if context_menu_items:
             li['contextMenuItems'] = context_menu_items
-#            li.addContextMenuItems(context_menu_items,
-#                                   replaceItems=clear_context_menu)
 
         li['url'] = self.get_url(info)
-#
-#        # Handle the return-early case
-#        if not return_only:
-#            kwargs = dict(
-#                handle=self.handle,
-#                url=self.get_url(info),
-#                listitem=li,
-#                isFolder=is_folder
-#            )
-#            return xbmcplugin.addDirectoryItem(**kwargs)
 
         return li
 
@@ -307,165 +241,14 @@ class OnDemandPlugin(object):
             return p
         raise ChannelException("Couldn't Find Resource: %s" % (p, ))
 
-#    def get_modal_keyboard_input(self, default=None, heading=None, hidden=False):
-#        keyb = xbmc.Keyboard(default, heading, hidden)
-#        keyb.doModal()
-#        val = keyb.getText()
-#        if keyb.isConfirmed():
-#            return val
-#        return None
-
-#    def get_existing_bookmarks(self):
-#        fpath = os.path.join(self.plugin.get_cache_dir(), 'canada.on.demand.%s.categories.cache' % (self.get_cache_key(),))
-#
-
-#    def add_bookmark_folder(self):
-#        curs = self.db_conn.cursor()
-#        curs.execute("select id, name, parent_id, path from bookmark_folders order by path desc")
-#        rows = curs.fetchall()
-#        items = [r[3] for r in rows]
-#        dialog = self.get_dialog()
-#        val = dialog.select("Select a Parent for the New Folder", items)
-#        if val == -1:
-#            return None
-#        parent = rows[val]
-#        name = self.get_modal_keyboard_input('New Folder', 'Enter the name for the new folder')
-#
-#        if name is None:
-#            return None
-#
-#        newpath = parent[3]+"/"+name
-#        curs = self.db_conn.cursor()
-#        curs.execute("select * from bookmark_folders where path=?", (newpath,))
-#        if curs.fetchall():
-#            dialog.ok("Failed!", "Couldn't create folder: %s because it already exists" % (newpath,))
-#            return None
-#
-#        curs.execute("insert into bookmark_folders (name, parent_id, path) values (?, ?, ?)", (name, parent[0], newpath))
-#        curs.execute("select id, name, parent_id, path from bookmark_folders where path=?", (newpath,))
-#        self.db_conn.commit()
-#        return curs.fetchall()[0]
-#
-#
-#    def action_add_to_bookmarks(self):
-#        curs = self.db_conn.cursor()
-#        curs.execute("select id, name, parent_id, path from bookmark_folders order by path asc")
-#        rows = curs.fetchall()
-#        logger.debug(rows)
-#        items = ["(New Folder)"]
-#        items += [r[3] for r in rows]
-#        dialog = self.get_dialog()
-#        val = dialog.select("Select a Bookmark Folder", items)
-#        logger.debug("VAL:%s" % (val,))
-#        if val == -1:
-#            return xbmcplugin.endOfDirectory(self.handle, succeeded=False)
-#
-#        elif val == 0:
-#            folder = self.add_bookmark_folder()
-#            if not folder:
-#                return xbmcplugin.endOfDirectory(self.handle, succeeded=False)
-#        else:
-#            logger.debug("ITEMS:%s" % (items,))
-#            logger.debug("ROWS:%s" % (rows,))
-#            folder = [r for r in rows if r[3]==items[val]][0]
-#
-#        bm = urldecode(self.args['url'].split("?",1)[1])
-#        name = self.get_modal_keyboard_input(bm['Title'], 'Bookmark Title')
-#        if name is None:
-#            return None
-#
-#        curs.execute("select * from bookmarks where folder_id = ? and plugin_url = ?", (folder[0], self.args['url']))
-#        if curs.fetchall():
-#            dialog.ok("Bookmark Already Exists", "This location is already bookmarked in %s" % (folder[3],))
-#            return None
-#
-#        curs.execute("insert into bookmarks (name, folder_id, plugin_url) values (?,?,?)", (name, folder[0], self.args['url']))
-#        self.db_conn.commit()
-#
-#        dialog.ok("Success!", "%s has been bookmarked!" % (name,))
-#        return xbmcplugin.endOfDirectory(self.handle, succeeded=False)
-#
-#    def action_browse_bookmarks(self):
-#        folder_id = int(self.args['folder_id'])
-#        curs = self.db_conn.cursor()
-#        curs.execute("select id, name, parent_id, path from bookmark_folders where parent_id = ?", (folder_id,))
-#        for folder in curs.fetchall():
-#            self.add_list_item({
-#                'Thumb': self.get_resource_path("images", "bookmark.png"),
-#                'folder_id': folder[0],
-#                'Title': "[%s]" % (folder[1],),
-#                'action': 'browse_bookmarks',
-#            }, bookmark_parent=folder_id, bookmark_folder_id=folder[0])
-#
-#        curs.execute("select id, name, plugin_url, folder_id from bookmarks where folder_id = ?", (folder_id,))
-#        logger.debug("Checking For Bookmarks")
-#        bookmarks = curs.fetchall()
-#        if not bookmarks:
-#            self.add_list_item({'Title': '-no bookmarks-'})
-#
-#        else:
-#            for bm in bookmarks:
-#                data = urldecode(bm[2].split("?", 1)[1])
-#                data['Title'] = bm[1]
-#                self.add_list_item(data, is_folder=True, bookmark_parent=bm[3], bookmark_id=bm[0])
-#
-#        self.end_list(sort_methods=(xbmcplugin.SORT_METHOD_LABEL,))
-#
-#    def action_remove_from_bookmarks(self):
-#        logger.debug("REMOVE BOOKMARK: %s" % (self.args['url'],))
-#        is_folder = bool(self.args.get('bookmark_folder_id', False))
-#        parent_id = self.args['folder_id']
-#        if is_folder:
-#            return self.remove_folder_from_bookmarks(parent_id=parent_id, folder_id=self.args['bookmark_folder_id'])
-#        else:
-#            return self.remove_bookmark_from_bookmarks(parent_id=parent_id, bookmark_id=self.args['bookmark_id'])
-#
-#
-#    def remove_folder_from_bookmarks(self, parent_id, folder_id):
-#        curs = self.db_conn.cursor()
-#        curs.execute("select id, name, parent_id, path from bookmark_folders where parent_id = ? and id = ?", (parent_id, folder_id))
-#        record = curs.fetchall()[0]
-#        dialog = self.get_dialog()
-#        if dialog.yesno("Are you Sure?", "Are you sure you wish to delete the bookmark folder: %s\n(All Bookmarks and Folders within it will be deleted!)" % (record[3],)):
-#            logger.debug("BM:Removing Bookmark Folder!")
-#            curs.execute("select id from bookmark_folders where path like ?", (record[3]+"%",))
-#            rows = curs.fetchall()
-#            for row in rows:
-#                logger.debug("deleting row: %s" % (row,))
-#                curs.execute("delete from bookmark_folders where id=?", row)
-#                curs.execute("delete from bookmarks where folder_id=?", row)
-#            self.db_conn.commit()
-#        return xbmc.executebuiltin("Container.Refresh")
-#
-#
-#    def remove_bookmark_from_bookmarks(self, parent_id, bookmark_id):
-#        curs = self.db_conn.cursor()
-#        curs.execute("select id, name, folder_id, plugin_url from bookmarks where folder_id = ? and id = ?", (parent_id, bookmark_id))
-#        record = curs.fetchall()[0]
-#        dialog = self.get_dialog()
-#        if dialog.yesno("Are you Sure?", "Are you sure you wish to delete the bookmark: %s" % (record[1],)):
-#            logger.debug("BM:Removing Bookmark!")
-#            curs.execute("delete from bookmarks where folder_id = ? and id = ?", (parent_id, bookmark_id))
-#            self.db_conn.commit()
-#        else:
-#            logger.debug("They Said No?")
-#        return xbmc.executebuiltin("Container.Refresh")
-
     def action_plugin_root(self):
         items = []
-#        self.add_list_item({
-#            'Title': 'Bookmarks',
-#            'action': 'browse_bookmarks',
-#            'folder_id': 1,
-#            'Thumb': self.get_resource_path("images", "bookmark.png")
-#        }, bookmark_parent=0)
         items.append(self.add_list_item({
             'Title': 'All Channels',
             'action': 'channel_list',
             'Thumb': os.path.join(CODEDIR, 'icon.png')
         }))
         return items
-#        self.end_list()
 
     def __call__(self):
         """
@@ -478,7 +261,6 @@ class OnDemandPlugin(object):
 
         if not action:
             action = 'plugin_root'
-
 
         if hasattr(self, 'action_%s' % (action,)):
             func = getattr(self, 'action_%s' % (action,))
@@ -506,13 +288,14 @@ class OnDemandPlugin(object):
 
     def __init__(self, script_url, handle, querystring):
         self.json_outfile = handle
-        proxy = self.get_setting("http_proxy")
-        port = self.get_setting("http_proxy_port")
-        if proxy and port:
-            proxy_handler = urllib2.ProxyHandler({'http':'%s:%s'%(proxy,port)})
+        self.proxy = self.get_setting("http_proxy")
+        self.proxy_port = self.get_setting("http_proxy_port")
+        self.service_args = None
+        if self.proxy and self.proxy_port:
+            proxy_handler = urllib2.ProxyHandler({'http':'%s:%s'%(self.proxy,self.proxy_port)})
             opener = urllib2.build_opener(proxy_handler)
             urllib2.install_opener(opener)
-            self.proxyhost = proxy
+            self.service_args = [ '--proxy=%s:%s' % (self.proxy, self.proxy_port) ]
 
         self.script_url = script_url
         self.handle = 1 # int(handle)
@@ -525,6 +308,7 @@ class OnDemandPlugin(object):
             self.args = {}
 #        self.connect_to_db()
         self.check_cache()
+        self.browser = None
         logger.debug("Constructed Plugin %s" % (self.__dict__,))
 
 def recursiveGet(parent, url):
