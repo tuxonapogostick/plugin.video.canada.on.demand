@@ -101,21 +101,22 @@ class CTVBaseChannel(BaseChannel):
                 if item['Authentication']['Required']:
                     continue
                 data = {}
-                data.update(self.args)
                 data['IsPlayable'] = True
-                data['show_id'] = item['Id']
-                data['EpisodeTitle'] = item['Name']
-                data['description'] = item['Desc']
+                data['entry_id'] = item['Id']
+                data['Episode'] = item['Name']
+                data['Plot'] = item['Desc']
                 data['action'] = 'play_episode'
                 data['video_id'] = item['Media']['Id']
-                data['ShowTitle'] = item['Media']['Name']
+                data['Title'] = item['Media']['Name']
                 data['Thumb'] = item['Media']['Images'][0]['Url']
                 data['seasonnum'] = item['Season']['Number']
                 data['episodenum'] = item['Episode']
-                data['pubDate'] = item['BroadcastDate'] + " " + \
-                                  item['BroadcastTime'] + " EST5EDT"
+                data['Date'] = item['BroadcastDate'] + " " + \
+                               item['BroadcastTime'] + " EST5EDT"
                 data['content_id'] = item['ContentPackages'][0]['Id']
                 data['duration'] = item['ContentPackages'][0]['Duration']
+                data['station'] = self.long_name
+                data['channel'] = self.args['channel']
                 items.append(self.plugin.add_list_item(data))
 
             if count <= page * 25:
