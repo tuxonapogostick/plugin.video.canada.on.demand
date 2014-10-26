@@ -121,7 +121,7 @@ class BellMediaBaseChannel(BaseChannel):
                 data['seasonnum'] = item['Season']['Number']
                 data['episodenum'] = item['Episode']
                 data['Date'] = item['BroadcastDate'] + " " + \
-                               item['BroadcastTime'] + " EST5EDT"
+                               item['BroadcastTime'] + " -0500"
                 data['content_id'] = item['ContentPackages'][0]['Id']
                 data['duration'] = item['ContentPackages'][0]['Duration']
                 data['station'] = self.long_name

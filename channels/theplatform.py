@@ -245,6 +245,9 @@ class ThePlatformBaseChannel(BaseChannel):
                 playpath = ref['src']
                 logger.debug('CBC type of SMIL  base_url=%s  playpath=%s'%(base_url, playpath))
             elif soup.meta['base'].startswith('http://'): #CBC type of SMIL
+                if re.search(r'doubleclick\.net', soup.meta['base']):
+                    # We don't need no steenking ads!
+                    continue
                 base_url = decode_htmlentities(soup.meta['base'])
                 playpath = ref['src']
                 logger.debug('CBC type of SMIL  base_url=%s  playpath=%s'%(base_url, playpath))
@@ -285,6 +288,7 @@ class ThePlatformBaseChannel(BaseChannel):
 
     def action_play_episode(self):
         items = self.get_episode_list_data(self.args['remote_PID'])
+        print items
         if len(items) != 1: raise RuntimeError('theplatform len(items) should be 1')
         parse = URLParser(swf_url=self.swf_url)
         return self.plugin.set_stream_url(parse(items[0]['clip_url']))
