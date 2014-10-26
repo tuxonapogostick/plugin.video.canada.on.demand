@@ -158,6 +158,7 @@ class OnDemandPlugin(object):
         listitem = { 'label' : 'clip', 'path' : url,
                      'proxyhost' : self.proxy,
                      'httpproxyport' : self.proxy_port,
+                     'socksproxyport' : self.socks_port,
                      'type' : type }
         return listitem
 
@@ -291,6 +292,7 @@ class OnDemandPlugin(object):
         self.json_outfile = handle
         self.proxy = self.get_setting("http_proxy")
         self.proxy_port = self.get_setting("http_proxy_port")
+        self.socks_port = self.get_setting("socks_proxy_port")
         self.service_args = None
         if self.proxy and self.proxy_port:
             proxy_handler = urllib2.ProxyHandler({'http':'%s:%s'%(self.proxy,self.proxy_port)})

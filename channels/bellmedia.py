@@ -609,6 +609,12 @@ class OldDiscoveryBaseChannel(BellMediaOldBaseChannel):
                 continue
             data['show_id'] = m.group(1)
             items.append(self.plugin.add_list_item(data))
+
+        if 'search' in self.args:
+            regexp = '^%s$' % self.args['search']
+            items = [ item for item in items 
+                      if re.match(regexp, item['videoInfo']['Title']) ]
+
         return items
 
     def action_browse_show(self):
