@@ -2,7 +2,7 @@
 # vim:ts=4:sw=4:ai:et:si:sts=4:fileencoding=utf-8
 from theplatform import *
 from BeautifulSoup import BeautifulStoneSoup
-from selenium import webdriver
+#from selenium import webdriver
 import yaml
 import json
 
@@ -48,9 +48,27 @@ class BellMediaBaseChannel(BaseChannel):
     def action_root(self):
         url = self.settings_js % self.brandId
         with self.plugin.fetch(url, max_age=self.cache_timeout,
-                               user_agent=self.user_agend) as f:
+                               user_agent=self.user_agent) as f:
             jsonp = f.read()
-        settings = yaml.load(jsonp[jsonp.index("(") + 1 : jsonp.rindex(")")])
+        jsonp = jsonp[jsonp.index("(") + 1 : jsonp.rindex(")")]
+        jsonp = jsonp.replace("\t", "        ")
+        with open(self.short_name + ".settings", "w") as f:
+            f.write(jsonp)
+        settings = None
+        try:
+            settings = json.loads(jsonp)
+        except Exception as e:
+            print e
+            pass
+
+        if not settings:
+            try:
+                settings = yaml.load(jsonp)
+            except Exception as e:
+                print 3
+                pass
+        if not settings:
+            return []
 
         items = []
         for widget in settings['widgets']:
@@ -358,13 +376,15 @@ class Space(BellMediaBaseChannel):
     brandId = 'space'
     destination = 'space_web'
 
-class BNN(BellMediaBaseChannel):
-    long_name = 'Business News Network'
-    short_name = 'bnn'
-    base_url = 'http://www.bnn.ca/video'
-    brandId = 'bnn'
-    destination = 'bnn_web'
+# Missing settings.js file
+#class BNN(BellMediaBaseChannel):
+#    long_name = 'Business News Network'
+#    short_name = 'bnn'
+#    base_url = 'http://www.bnn.ca/video'
+#    brandId = 'bnn'
+#    destination = 'bnn_web'
 
+# Totally different format
 #class Fashion(BellMediaBaseChannel):
 #    short_name = 'fashion'
 #    base_url = 'http://watch.fashiontelevision.com/AJAX/'
