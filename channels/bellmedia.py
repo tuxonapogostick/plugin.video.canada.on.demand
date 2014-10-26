@@ -70,7 +70,7 @@ class BellMediaBaseChannel(BaseChannel):
                     data.update(self.args)
                     data['Title'] = item['text']
                     data['action'] = 'browse_%s' % item['collection']['type']
-                    data['show_id'] = item['collection']['id']
+                    data['entry_id'] = item['collection']['id']
                     items.append(self.plugin.add_list_item(data))
             elif widget['type'] == "expand-collection-list":
                 for item in widget['items']:
@@ -83,7 +83,7 @@ class BellMediaBaseChannel(BaseChannel):
                     m = re.match(r'collections/(\d+)/medias', item['apiUrl'])
                     if not m:
                         continue
-                    data['show_id'] = int(m.group(1))
+                    data['entry_id'] = int(m.group(1))
                     items.append(self.plugin.add_list_item(data))
         return items
 
@@ -91,7 +91,7 @@ class BellMediaBaseChannel(BaseChannel):
         return self.action_browse_common_content(self.medias_json, 'video_id')
 
     def action_browse_content(self):
-        return self.action_browse_common_content(self.contents_json, 'show_id')
+        return self.action_browse_common_content(self.contents_json, 'entry_id')
 
     def action_browse_common_content(self, baseUrl, idName):
         baseUrl = baseUrl + self.json_qs
@@ -140,7 +140,7 @@ class BellMediaBaseChannel(BaseChannel):
         items = []
         page = 1
         while True:
-            url = baseUrl % (self.destination, int(self.args['show_id']),
+            url = baseUrl % (self.destination, int(self.args['entry_id']),
                              self.media_group_json_include, page)
             with self.plugin.fetch(url, max_age=self.cache_timeout,
                                    user_agent=self.user_agent) as f:
