@@ -111,7 +111,6 @@ class BellMediaBaseChannel(BaseChannel):
                 if item['Authentication']['Required']:
                     continue
                 data = {}
-                data['IsPlayable'] = True
                 data['entry_id'] = item['Id']
                 data['Episode'] = item['Name']
                 data['Plot'] = item['Desc']
@@ -127,7 +126,7 @@ class BellMediaBaseChannel(BaseChannel):
                 data['duration'] = item['ContentPackages'][0]['Duration']
                 data['station'] = self.long_name
                 data['channel'] = self.args['channel']
-                items.append(self.plugin.add_list_item(data))
+                items.append(self.plugin.add_list_item(data, is_folder=False))
 
             if count <= page * 25:
                 break
@@ -376,9 +375,288 @@ class Space(BellMediaBaseChannel):
 #    brandId = 'bnn'
 #    destination = 'bnn_web'
 
-# Totally different format
-#class Fashion(BellMediaBaseChannel):
-#    short_name = 'fashion'
-#    base_url = 'http://watch.fashiontelevision.com/AJAX/'
-#    long_name = 'Fashion Television'
-#    #swf_url = 'http://watch.fashiontelevision.com/Flash/player.swf?themeURL=http://watch.fashiontelevision.com/themes/FashionTelevision/player/theme.aspx'
+class BellMediaOldBaseChannel(BaseChannel):
+    status = STATUS_GOOD
+    is_abstract = True
+    root_url = 'VideoLibraryWithFrame.aspx'
+    default_action = 'root'
+
+    def action_root(self):
+        url = self.base_url + self.root_url
+        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
+        ul = soup.find('div', {'id': 'Level1'}).find('ul')
+        items = []
+        for li in ul.findAll('li'):
+            data = {}
+            data.update(self.args)
+            data['Title'] = decode_htmlentities(li.a['title'])
+            data['action'] = 'browse_show'
+            data['show_id'] = li.a['id']
+            items.append(self.plugin.add_list_item(data))
+        return items
+
+    def action_browse(self):
+        """
+        DEPRECATED Bookmarks Shouldn't Use this..
+        need to find a way to update user's bookmarks
+
+        """
+        rurl = self.args.get('remote_url', 'None')
+        if rurl == 'None' or rurl is None:
+            return self.action_root()
+
+        logging.debug("RURL: %s" %(rurl.__class__,))
+        show_id = re.findall(r"\&ShowID=(\d+)", rurl)
+        if show_id:
+            self.args['show_id'] = show_id[0]
+            return self.action_browse_show()
+
+        season_id = re.findall(r"\&SeasonID=(\d+)", rurl)
+        if season_id:
+            self.args['season_id'] = season_id[0]
+            return self.action_browse_season()
+
+        episode_id = re.findall(r"&EpisodeID=(\d+)", rurl)
+        if episode_id:
+            self.args['episode_id'] = eposode_id[0]
+            return self.action_browse_episode()
+
+
+    def action_browse_season(self):
+        url = self.base_url + 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=3&SeasonID=%s&ForceParentShowID=%s' % (self.args['season_id'],self.args['show_id'])
+        page = self.plugin.fetch(url, max_age=self.cache_timeout).read()
+        soup = BeautifulStoneSoup(page)
+
+        items = []
+        for li in soup.find('ul').findAll('li'):
+            a = li.find('a', {'id': re.compile('^Episode_\d+$')})
+
+            data = {}
+            data.update(self.args)
+            data['episode_id'] = a['id'][8:]
+            data['videocount'] = re.search("Interface\.GetChildPanel\('Episode',[ \d]+,([ \d]+),",a['onclick']).group(1)
+            data['Title'] = a.text
+
+
+            vc = int(data['videocount'])
+            if vc == 1:
+                action = 'play_episode'
+            elif vc <= int(self.plugin.get_setting('max_playlist_size')) \
+                and self.plugin.get_setting("make_playlists") == "true":
+                action = 'play_episode'
+            else:
+                action = 'browse_episode'
+            data['action'] = action
+            if action == 'play_episode':
+                data['station'] = self.long_name
+
+            dl = li.find('dl', {'class':'Item'} )
+            if dl:
+                data['Plot'] = dl.find('dd', {'class':'Description'}).text
+                data['Title'] = dl.find('dd', {'class':'Thumbnail'}).a['title']
+
+                #m,d,y = ep['pubdate'].split("/")
+                #data['Date'] = "%s.%s.%s" % (d,m,y)
+                try:
+                    data['Thumb'] = dl.find('dd', {'class':'Thumbnail'}).img['src']
+                    pos = data['Thumb'].find('.jpg/80/60')
+                    if pos!=-1:
+                        data['Thumb'] = data['Thumb'][:pos]+'.jpg'
+                except:
+                    pass
+
+            items.append(self.plugin.add_list_item(data, is_folder=(data['action']!='play_episode')))
+        return items
+
+    def action_play_episode(self):
+        vidcount = self.args.get('videocount')
+        if vidcount:
+            vidcount = int(vidcount)
+
+        items = []
+
+        if vidcount  and vidcount == 1:
+            data = list(self.iter_clip_list())[0]
+            logging.debug(data)
+            url = self.clipid_to_stream_url(data['clip_id'])
+            return self.plugin.set_stream_url(url, data)
+        else:
+            for clipdata in self.iter_clip_list():
+                url = self.plugin.get_url(clipdata)
+                li = self.plugin.add_list_item(clipdata, is_folder=False, return_only=True)
+                items.append(li)
+
+            time.sleep(1)
+            logging.debug("CLIPDATA: %s" % (playlist,))
+            return items
+
+    def iter_clip_list(self):
+        start_offset = 1
+        number_to_get = 12
+        url_template = self.base_url + 'InfiniteScrollingContents.aspx?EpisodeID=%s&NumberToGet=%d&StartOffset=%d'
+#        url = self.base_url + 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=4&EpisodeID=%s&ForceParentShowID=%s' % (self.args['episode_id'],self.args['show_id'])
+
+        while True:
+            url = url_template % (self.args['episode_id'],number_to_get,start_offset)
+            page = self.plugin.fetch(url, max_age=self.cache_timeout)
+            soup = BeautifulStoneSoup(page)
+            start_offset += number_to_get
+
+            clips = soup.findAll('li')
+            if len(clips)==0:
+                break
+
+            for li in clips:
+                text = li.dt.a['onclick']
+                data = {}
+                data.update(self.args)
+                data['action'] = 'play_clip'
+                data['Title'] = BeautifulSoup(li.dt.a.text,convertEntities=BeautifulSoup.HTML_ENTITIES).contents[0]
+                try:
+                    data['Title'] = re.search("Title:'([^'\\\\]*(\\\\.[^'\\\\]*)*)'",text).group(1).replace("\\'","'")
+                    data['Thumb'] = re.search("EpisodeThumbnail:'([^'\\\\]*(\\\\.[^'\\\\]*)*)'",text).group(1)
+                    data['Plot'] = re.search("Description:'([^'\\\\]*(\\\\.[^'\\\\]*)*)'",text).group(1)
+                except:
+                    pass
+                data['clip_id'] = re.search("ClipId:'([^']+)'",text).group(1)
+                yield data
+
+    def action_browse_episode(self):
+        logging.debug("ID: %s" % (self.args['episode_id'],))
+        items = []
+        for data in self.iter_clip_list():
+            items.append(self.plugin.add_list_item(data, is_folder=False))
+        return items
+
+
+    def action_browse_show(self):
+        url = self.base_url + 'VideoLibraryContents.aspx?GetChildOnly=true&PanelID=2&ShowID=%s' % (self.args['show_id'],)
+        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
+        div = soup.find('div',{'id': re.compile('^Level\d$')})
+        levelclass = [c for c in re.split(r"\s+", div['class']) if c.startswith("Level")][0]
+        levelclass = int(levelclass[5:])
+        items = []
+        if levelclass == 4:
+            # Sites like TSN Always return level4 after the top level
+            for li in soup.findAll('li'):
+                a = li.find('dl', {"class": "Item"}).dt.a
+                data = {}
+                data.update(self.args)
+                data.update(parse_bad_json(a['onclick'][45:-16]))
+                data['action'] = 'play_clip'
+                data['clip_id'] = data['ClipId']
+                items.append(self.plugin.add_list_item(data, is_folder=False))
+        else:
+            for li in soup.find('ul').findAll('li'):
+                a = li.find('a')
+                is_folder = True
+                data = {}
+                data.update(self.args)
+                if "Interface.GetChildPanel('Season'" in a['onclick']:
+                    data['action'] = 'browse_season'
+                    data['season_id'] = a['id']
+                elif "Interface.GetChildPanel('Episode'" in a['onclick']:
+                    data['action'] = 'browse_episode'
+                    if self.plugin.get_setting("make_playlists") == "true":
+                        data['action'] = 'play_episode'
+                        data['station'] = self.long_name
+                    data['episode_id'] = a['id'][8:]
+                data['Title'] = decode_htmlentities(a['title'])
+                items.append(self.plugin.add_list_item(data))
+        return items
+
+    def clipid_to_stream_url(self, clipid):
+        rurl = "http://cls.ctvdigital.net/cliplookup.aspx?id=%s" % (clipid)
+        parse = URLParser(swf_url=self.swf_url)
+        url = parse(self.plugin.fetch(rurl).read().strip()[17:].split("'",1)[0])
+        return url
+
+    def action_play_clip(self):
+        url = self.clipid_to_stream_url(self.args['clip_id'])
+        logging.debug("Playing Stream: %s" % (url,))
+        return self.plugin.set_stream_url(url)
+
+
+class Fashion(BellMediaOldBaseChannel):
+    short_name = 'fashion'
+    base_url = 'http://watch.fashiontelevision.com/AJAX/'
+    long_name = 'Fashion Television'
+    swf_url = 'http://watch.fashiontelevision.com/Flash/player.swf?themeURL=http://watch.fashiontelevision.com/themes/FashionTelevision/player/theme.aspx'
+
+
+class OldDiscoveryBaseChannel(BellMediaOldBaseChannel):
+    status = STATUS_GOOD
+    is_abstract = True
+    base_url = 'http://watch.discoverychannel.ca/AJAX/'
+    root_url = 'FeaturedFrame.aspx'
+    default_action = 'root'
+    swf_url = "http://watch.discoverychannel.ca/Flash/player.swf?themeURL=http://watch.discoverychannel.ca/themes/Discoverynew/player/theme.aspx"
+
+    def action_root(self):
+        url = self.base_url + self.root_url + self.bin_id
+        soup = BeautifulSoup(self.plugin.fetch(url, max_age=self.cache_timeout))
+        ul = soup.find('div', {'class': 'Frame'}).find('ul')
+        items = []
+        for li in ul.findAll('li'):
+            data = {}
+            data.update(self.args)
+            data['Title'] = decode_htmlentities(li.a['title'])
+            data['Plot'] = li.find('dd', {'class':'Description'}).text
+            data['action'] = 'browse_show'
+            onclick = li.a['onclick']
+            m = re.search(r'.*\((\d+)\s\)', onclick)
+            if not m:
+                continue
+            data['show_id'] = m.group(1)
+            items.append(self.plugin.add_list_item(data))
+        return items
+
+    def action_browse_show(self):
+        url = self.base_url + 'ClipLookup.aspx?episodeid=%s' % self.args['show_id']
+        fu = self.plugin.fetch(url, max_age=self.cache_timeout)
+        text = fu.read()
+        fu.close()
+        arrayitems = re.findall(r'videoArray.push\(\s*new Video\(\s*({.*?})\s*\)\s*\);', text)
+        segments = [ yaml.load(item.replace(":'", ": '")\
+                                   .replace(":false", ": false"))
+                     for item in arrayitems ]
+
+        items = []
+        clips = [ item['ClipId'] for item in segments ]
+        data = {}
+        data.update(self.args)
+        data['action'] = 'play_segments'
+        data['Thumb'] = segments[0]['EpisodeThumbnail']
+        data['segments'] = ",".join(clips)
+        items.append(self.plugin.add_list_item(data, is_folder=False))
+
+        return items
+
+    def action_play_segments(self):
+        segments = []
+        for segment in self.args['segments'].split(","):
+            url = self.clipid_to_stream_url(segment)
+            segments.append(self.plugin.set_stream_url(url))
+        data = { 'label' : 'segments', 'segments' : segments }
+        return data
+
+class AnimalPlanet(OldDiscoveryBaseChannel):
+    short_name = 'animalplanet'
+    long_name = 'Animal Planet'
+    bin_id = '?BinId=8621'
+
+class DiscoveryWorld(OldDiscoveryBaseChannel):
+    short_name = 'discoveryworld'
+    long_name = 'Discovery World'
+    bin_id = '?BinId=8622'
+
+class DiscoveryScience(OldDiscoveryBaseChannel):
+    short_name = 'discoveryscience'
+    long_name = 'Discovery Science'
+    bin_id = '?BinId=8623'
+
+class InvestigationDiscovery(OldDiscoveryBaseChannel):
+    short_name = 'investigationdiscovery'
+    long_name = 'Investigation Discovery'
+    bin_id = '?BinId=8624'
+
