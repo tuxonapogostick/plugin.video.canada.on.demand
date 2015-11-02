@@ -1,0 +1,5 @@
+By Version/Distro:
+
+Kodi 14.2, OpenElec 5.0.8, 2015 Nov 02, Script *not* working!
+
+By Channel:
